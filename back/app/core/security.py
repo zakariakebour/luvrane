@@ -1,7 +1,7 @@
 from passlib.context import CryptContext
 from datetime import datetime,timezone,timedelta
 #Importamos desde el archivo config para cardar las variables
-from core.config import SECRET_KEY,ACCESS_TOKEN_EXPIRE_MINUTES,REFRESH_TOKEN_EXPIRE_DAYS,ALGORITHM
+from core.config import SECRET_KEY
 #Importamos las excepciones
 from core.exceptions import UnauthorizedException
 
@@ -25,9 +25,9 @@ import jwt
 
 #Creamos las variables que necesitamos sacando el valor del archivo .env o en entorno aws
 secret_key = SECRET_KEY
-algorithm = ALGORITHM
-acces_token_expire = ACCESS_TOKEN_EXPIRE_MINUTES
-refresh_token_expire = REFRESH_TOKEN_EXPIRE_DAYS
+algorithm = HS256
+acces_token_expire = 30
+refresh_token_expire = 7
 
 #Metodo para generar token
 def create_access_token(user_id: str,role: str) -> str:
