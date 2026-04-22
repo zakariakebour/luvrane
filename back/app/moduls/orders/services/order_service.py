@@ -159,8 +159,7 @@ def get_orders_by_store_service(db: Session, store_id: str, current_user_id: str
 
     return get_orders_by_store(db, store_id, skip=skip, limit=limit)
 
-
-#Metodo para actualizar estado del pedido (para el owner)
+#Metodo para actualizar estado del pedido
 def update_order_status_service(db: Session, order_id: str, status: OrderStatus, current_user_id: str):
     #Buscamos el pedido
     order = get_order_by_id(db, order_id)
@@ -168,9 +167,19 @@ def update_order_status_service(db: Session, order_id: str, status: OrderStatus,
         raise NotFoundException("Commande introuvable")
 
     #Comprobamos que el usuario es owner de la tienda del pedido
-    store = select_store_by_id(db, order.store_id)
+    if not order.items:
+        raise ValidationException("Commande sans articles")
+
+    #Obtenemos el store del primer producto (asumimos que todos son de la misma tienda)
+    first_product = order.items[0].product
+
+    if not first_product:
+        raise NotFoundException("Produit introuvable")
+
+    store = select_store_by_id(db, first_product.store_id)
     if not store:
         raise NotFoundException("Boutique introuvable")
+
     if store.owner_id != current_user_id:
         raise ForbiddenException("Accès interdit")
 
@@ -190,11 +199,8 @@ def update_order_status_service(db: Session, order_id: str, status: OrderStatus,
     if status not in valid_transitions.get(order.status, []):
         raise ValidationException(f"Transition de statut invalide")
 
-    updated_order = update_order_status(db, order, status)
-    db.commit()
-    return updated_order
-
-
+    return update_order_status(db, order, status)
+    
 #Metodo para cancelar pedido (para el usuario)
 def cancel_order_service(db: Session, order_id: str, user_id: str):
     #Buscamos el pedido
