@@ -1,9 +1,10 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 #Importamos manejador global de excepciones
 from core.exceptions import AppException
 from fastapi.responses import JSONResponse
-from fastapi import Request
+#Importamos Mangum para adaptarlo a lambda
+from mangum import Mangum
 #Importamos routers de usuarios
 from moduls.users.api import user_router, address_router, likes_router, cart_router
 #Importamos routers de tiendas
@@ -53,3 +54,6 @@ app.include_router(order_router,prefix="/api/v1/orders")
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+#Punto de entrada para AWS Lambda
+handler = Mangum(app)

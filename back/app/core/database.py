@@ -4,7 +4,11 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-#Importamos variables desde config
+from dotenv import load_dotenv
+
+load_dotenv()
+
+#Configuracion de Aurora DSQL
 from core.config import (
     DSQL_ENDPOINT,
     DSQL_PORT,
@@ -16,7 +20,7 @@ from core.config import (
 )
 
 #En local usamos credenciales del .env
-#En App Runner boto3 usa el rol IAM automaticamente
+#En Lambda boto3 usa el rol IAM automaticamente
 if os.getenv("ENV") == "local":
     boto3.setup_default_session(
         aws_access_key_id=AWS_ACCESS_KEY_ID,
@@ -34,8 +38,16 @@ def generate_dsql_token() -> str:
     )
     return token
 
-#Metodo para crear engine con token fresco
+#Variable global para reutilizar el engine entre invocaciones Lambda
+#Lambda reutiliza el contenedor entre peticiones
+_engine = None
+
 def get_engine():
+    global _engine
+    #Si ya existe el engine lo reutilizamos
+    if _engine is not None:
+        return _engine
+
     token = generate_dsql_token()
     encoded_token = urllib.parse.quote_plus(token)
 
@@ -45,19 +57,21 @@ def get_engine():
         f"?sslmode=require"
     )
 
-    return create_engine(
+    #En Lambda usamos pool pequeño para no agotar conexiones
+    _engine = create_engine(
         database_url,
         pool_pre_ping=True,
         pool_recycle=1800,
-        pool_size=10,
-        max_overflow=20
+        pool_size=2,                   
+        max_overflow=5                
     )
+    return _engine
 
-engine = get_engine()
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 def get_db():
+    engine = get_engine()
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     db = SessionLocal()
     try:
         yield db
