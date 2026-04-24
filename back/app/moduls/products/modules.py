@@ -1,4 +1,5 @@
-from sqlalchemy import Column, String, ForeignKey, Text, Numeric, Integer, DateTime, Boolean, Enum, UniqueConstraint
+from sqlalchemy import Column, String, Text, Numeric, Integer, DateTime, Boolean, UniqueConstraint
+from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import relationship
 from core.database import Base
 import uuid
@@ -23,8 +24,14 @@ class Product(Base):
 
     price = Column(Numeric(10, 2), nullable=False)
 
-    store_id = Column(String(36), ForeignKey("stores.id"), nullable=False)
-    store = relationship("Store", back_populates="products")
+    store_id = Column(String(36), nullable=False, index=True)
+
+    store = relationship(
+        "Store",
+        primaryjoin="Product.store_id == Store.id",
+        back_populates="products",
+        viewonly=True
+    )
 
     # Columna para activar/desactivar el producto
     is_active = Column(Boolean, default=True)
@@ -32,8 +39,16 @@ class Product(Base):
     # Columna para fecha de eliminacion
     deleted_at = Column(DateTime, nullable=True)
 
-    # Columna relacion con estado del producto
-    status = Column(Enum(ProductStatus), nullable=False, default=ProductStatus.active)
+    # Columna relacion con estado del producto, formato soportado por Aurora DSQL 
+    status = Column(
+        SQLEnum(
+            ProductStatus,
+            native_enum=False,
+            length=30
+        ),
+        nullable=False,
+        default=ProductStatus.active
+    )
 
     # Columna para registrar ultima fecha de modificacion
     updated_at = Column(DateTime, nullable=True, onupdate=lambda: datetime.now(timezone.utc))
@@ -41,21 +56,27 @@ class Product(Base):
     # Relación con imágenes
     images = relationship(
         "ProductImage",
+        primaryjoin="Product.id == ProductImage.product_id",
         back_populates="product",
+        viewonly=True,
         cascade="all, delete"
     )
 
     # Relación con variantes
     variants = relationship(
         "ProductVariant",
+        primaryjoin="Product.id == ProductVariant.product_id",
         back_populates="product",
+        viewonly=True,
         cascade="all, delete"
     )
 
     # Relación con opciones del producto (Color, Talla, etc)
     options = relationship(
         "ProductOption",
+        primaryjoin="Product.id == ProductOption.product_id",
         back_populates="product",
+        viewonly=True,
         cascade="all, delete"
     )
 
@@ -77,14 +98,21 @@ class ProductVariant(Base):
     # Firma única de la combinación (MUY IMPORTANTE)
     signature = Column(String(255), unique=True, index=True, nullable=False)
 
-    # Relación con producto
-    product_id = Column(String(36), ForeignKey("products.id"), nullable=False)
-    product = relationship("Product", back_populates="variants")
+    product_id = Column(String(36), nullable=False, index=True)
+
+    product = relationship(
+        "Product",
+        primaryjoin="ProductVariant.product_id == Product.id",
+        back_populates="variants",
+        viewonly=True
+    )
 
     # Relación con valores de la variante
     values = relationship(
         "VariantValue",
+        primaryjoin="ProductVariant.id == VariantValue.variant_id",
         back_populates="variant",
+        viewonly=True,
         cascade="all, delete"
     )
 
@@ -103,18 +131,25 @@ class ProductOption(Base):
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
 
-    product_id = Column(String(36), ForeignKey("products.id"), nullable=False)
+    product_id = Column(String(36), nullable=False, index=True)
 
     # Nombre de la opcion
     name = Column(String(50), nullable=False)
 
     # Relación con producto
-    product = relationship("Product", back_populates="options")
+    product = relationship(
+        "Product",
+        primaryjoin="ProductOption.product_id == Product.id",
+        back_populates="options",
+        viewonly=True
+    )
 
     # Relación con valores
     values = relationship(
         "ProductOptionValue",
+        primaryjoin="ProductOption.id == ProductOptionValue.option_id",
         back_populates="option",
+        viewonly=True,
         cascade="all, delete"
     )
 
@@ -124,13 +159,18 @@ class ProductOptionValue(Base):
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
 
-    option_id = Column(String(36), ForeignKey("product_options.id"), nullable=False)
+    option_id = Column(String(36), nullable=False, index=True)
 
     # Valor de la opcion
     value = Column(String(50), nullable=False)
 
     # Relación con opción
-    option = relationship("ProductOption", back_populates="values")
+    option = relationship(
+        "ProductOption",
+        primaryjoin="ProductOptionValue.option_id == ProductOption.id",
+        back_populates="values",
+        viewonly=True
+    )
 
 # Tabla intermedia variante - valores
 class VariantValue(Base):
@@ -138,15 +178,23 @@ class VariantValue(Base):
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
 
-    variant_id = Column(String(36), ForeignKey("product_variants.id"), nullable=False)
-
-    option_value_id = Column(String(36), ForeignKey("product_option_values.id"), nullable=False)
+    variant_id = Column(String(36), nullable=False, index=True)
+    option_value_id = Column(String(36), nullable=False, index=True)
 
     # Relación con variante
-    variant = relationship("ProductVariant", back_populates="values")
+    variant = relationship(
+        "ProductVariant",
+        primaryjoin="VariantValue.variant_id == ProductVariant.id",
+        back_populates="values",
+        viewonly=True
+    )
 
     # Relación con valor de opción
-    option_value = relationship("ProductOptionValue")
+    option_value = relationship(
+        "ProductOptionValue",
+        primaryjoin="VariantValue.option_value_id == ProductOptionValue.id",
+        viewonly=True
+    )
 
     # Evitar duplicados de la misma combinación
     __table_args__ = (
@@ -167,7 +215,12 @@ class ProductImage(Base):
     # Orden del carrusel
     position = Column(Integer, default=0)
 
-    product_id = Column(String(36), ForeignKey("products.id"), nullable=False)
+    product_id = Column(String(36), nullable=False, index=True)
 
     # Relación con producto
-    product = relationship("Product", back_populates="images")
+    product = relationship(
+        "Product",
+        primaryjoin="ProductImage.product_id == Product.id",
+        back_populates="images",
+        viewonly=True
+    )

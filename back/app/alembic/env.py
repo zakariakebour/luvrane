@@ -34,18 +34,15 @@ target_metadata = Base.metadata
 
 #Metodo para ejecutar migraciones
 def run_migrations_online():
-    #Usamos nuestro engine con token IAM fresco
-    connectable = get_engine()
+    engine = get_engine()
 
-    with connectable.connect() as connection:
+    with engine.connect() as connection:
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
-            compare_type=True,
-            compare_server_default=True
+            transactional_ddl=False
         )
 
-        with context.begin_transaction():
-            context.run_migrations()
+        context.run_migrations()
 
 run_migrations_online()
