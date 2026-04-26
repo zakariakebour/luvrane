@@ -1,10 +1,12 @@
 from sqlalchemy import Column, String, Text, Boolean, DateTime
-from sqlalchemy.orm import relationship, foreign, remote
+from sqlalchemy.orm import relationship, foreign
 from core.database import Base
 import uuid
 from datetime import datetime, timezone
 from moduls.products.modules import Product
 from moduls.users.modules import User
+
+
 class Store(Base):
     __tablename__ = "stores"
 
@@ -16,7 +18,7 @@ class Store(Base):
 
     owner = relationship(
         "User",
-        primaryjoin=foreign(owner_id) == remote(User.id),
+        primaryjoin=foreign(owner_id) == User.id,
         viewonly=True
     )
 
@@ -38,7 +40,7 @@ class Store(Base):
     #Relacion con la tabla productos
     products = relationship(
         "Product",
-        primaryjoin=remote(id) == foreign(Product.store_id),
+        primaryjoin=id == foreign(Product.store_id),
         viewonly=True
     )
 

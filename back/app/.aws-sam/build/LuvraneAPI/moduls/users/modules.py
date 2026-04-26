@@ -1,6 +1,6 @@
 from sqlalchemy import Column, String, Boolean, Integer, DateTime, Text
 from sqlalchemy import Enum as SQLEnum
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, foreign
 from core.database import Base
 from datetime import datetime, timezone
 import enum
@@ -55,28 +55,25 @@ class User(Base):
     # Relacion con direcciones del usuario
     addresses = relationship(
         "UserAddress",
-        primaryjoin="User.id == UserAddress.user_id",
+        primaryjoin="User.id == foreign(UserAddress.user_id)",
         back_populates="user",
-        viewonly=True,
-        cascade="all, delete"
+        viewonly=True
     )
 
     # Relacion con carrito del usuario
     cart_items = relationship(
         "CartItem",
-        primaryjoin="User.id == CartItem.user_id",
+        primaryjoin="User.id == foreign(CartItem.user_id)",
         back_populates="user",
-        viewonly=True,
-        cascade="all, delete"
+        viewonly=True
     )
 
     # Relacion con likes del usuario
     likes = relationship(
         "ProductLike",
-        primaryjoin="User.id == ProductLike.user_id",
+        primaryjoin="User.id == foreign(ProductLike.user_id)",
         back_populates="user",
-        viewonly=True,
-        cascade="all, delete"
+        viewonly=True
     )
 
 
@@ -92,7 +89,7 @@ class UserAddress(Base):
 
     user = relationship(
         "User",
-        primaryjoin="UserAddress.user_id == User.id",
+        primaryjoin="foreign(UserAddress.user_id) == User.id",
         back_populates="addresses",
         viewonly=True
     )
@@ -128,7 +125,7 @@ class CartItem(Base):
 
     user = relationship(
         "User",
-        primaryjoin="CartItem.user_id == User.id",
+        primaryjoin="foreign(CartItem.user_id) == User.id",
         back_populates="cart_items",
         viewonly=True
     )
@@ -138,7 +135,7 @@ class CartItem(Base):
 
     product = relationship(
         "Product",
-        primaryjoin="CartItem.product_id == Product.id",
+        primaryjoin="foreign(CartItem.product_id) == Product.id",
         viewonly=True
     )
 
@@ -147,7 +144,7 @@ class CartItem(Base):
 
     variant = relationship(
         "ProductVariant",
-        primaryjoin="CartItem.variant_id == ProductVariant.id",
+        primaryjoin="foreign(CartItem.variant_id) == ProductVariant.id",
         viewonly=True
     )
 
@@ -170,7 +167,7 @@ class ProductLike(Base):
 
     user = relationship(
         "User",
-        primaryjoin="ProductLike.user_id == User.id",
+        primaryjoin="foreign(ProductLike.user_id) == User.id",
         back_populates="likes",
         viewonly=True
     )
@@ -180,7 +177,7 @@ class ProductLike(Base):
 
     product = relationship(
         "Product",
-        primaryjoin="ProductLike.product_id == Product.id",
+        primaryjoin="foreign(ProductLike.product_id) == Product.id",
         viewonly=True
     )
 

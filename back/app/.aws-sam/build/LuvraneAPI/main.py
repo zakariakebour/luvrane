@@ -15,6 +15,11 @@ from moduls.products.api.product_image import router as product_image_router
 from moduls.products.api.product_variant import router as product_variant_router
 #Importamos los endpoints de gestion de pedidos
 from moduls.orders.api.order_api import router as order_router
+# IMPORTANTE: solo por side effects (registro de ORM)
+from moduls.users.modules import *
+from moduls.stores.modules import *
+from moduls.products.modules import *
+from moduls.orders.modules import *
 
 #Creamos la aplicacion
 app = FastAPI(
