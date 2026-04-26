@@ -1,6 +1,6 @@
 from sqlalchemy import Column, String, Numeric, Integer, DateTime, Boolean
 from sqlalchemy import Enum as SQLEnum
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, foreign
 from core.database import Base
 from datetime import datetime, timezone
 import enum
@@ -28,7 +28,7 @@ class Order(Base):
 
     user = relationship(
         "User",
-        primaryjoin="Order.user_id == User.id",
+        primaryjoin="foreign(Order.user_id) == User.id",
         viewonly=True
     )
 
@@ -37,7 +37,7 @@ class Order(Base):
 
     address = relationship(
         "UserAddress",
-        primaryjoin="Order.address_id == UserAddress.id",
+        primaryjoin="foreign(Order.address_id) == UserAddress.id",
         viewonly=True
     )
 
@@ -61,10 +61,9 @@ class Order(Base):
     #Relacion con los items del pedido
     items = relationship(
         "OrderItem",
-        primaryjoin="Order.id == OrderItem.order_id",
+        primaryjoin="Order.id == foreign(OrderItem.order_id)",
         back_populates="order",
-        viewonly=True,
-        cascade="all, delete"
+        viewonly=True
     )
 
     #Fecha de creacion del pedido
@@ -79,6 +78,7 @@ class Order(Base):
     #Fecha de cancelacion
     cancelled_at = Column(DateTime, nullable=True)
 
+
 #Tabla de items del pedido
 class OrderItem(Base):
     __tablename__ = "order_items"
@@ -91,7 +91,7 @@ class OrderItem(Base):
 
     order = relationship(
         "Order",
-        primaryjoin="OrderItem.order_id == Order.id",
+        primaryjoin="foreign(OrderItem.order_id) == Order.id",
         back_populates="items",
         viewonly=True
     )
@@ -101,7 +101,7 @@ class OrderItem(Base):
 
     product = relationship(
         "Product",
-        primaryjoin="OrderItem.product_id == Product.id",
+        primaryjoin="foreign(OrderItem.product_id) == Product.id",
         viewonly=True
     )
 
@@ -110,7 +110,7 @@ class OrderItem(Base):
 
     variant = relationship(
         "ProductVariant",
-        primaryjoin="OrderItem.variant_id == ProductVariant.id",
+        primaryjoin="foreign(OrderItem.variant_id) == ProductVariant.id",
         viewonly=True
     )
 

@@ -1,6 +1,6 @@
 from sqlalchemy import Column, String, Text, Numeric, Integer, DateTime, Boolean, UniqueConstraint
 from sqlalchemy import Enum as SQLEnum
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, foreign
 from core.database import Base
 import uuid
 from datetime import datetime, timezone
@@ -28,7 +28,7 @@ class Product(Base):
 
     store = relationship(
         "Store",
-        primaryjoin="Product.store_id == Store.id",
+        primaryjoin="foreign(Product.store_id) == Store.id",
         back_populates="products",
         viewonly=True
     )
@@ -56,28 +56,25 @@ class Product(Base):
     # Relación con imágenes
     images = relationship(
         "ProductImage",
-        primaryjoin="Product.id == ProductImage.product_id",
+        primaryjoin="Product.id == foreign(ProductImage.product_id)",
         back_populates="product",
-        viewonly=True,
-        cascade="all, delete"
+        viewonly=True
     )
 
     # Relación con variantes
     variants = relationship(
         "ProductVariant",
-        primaryjoin="Product.id == ProductVariant.product_id",
+        primaryjoin="Product.id == foreign(ProductVariant.product_id)",
         back_populates="product",
-        viewonly=True,
-        cascade="all, delete"
+        viewonly=True
     )
 
     # Relación con opciones del producto (Color, Talla, etc)
     options = relationship(
         "ProductOption",
-        primaryjoin="Product.id == ProductOption.product_id",
+        primaryjoin="Product.id == foreign(ProductOption.product_id)",
         back_populates="product",
-        viewonly=True,
-        cascade="all, delete"
+        viewonly=True
     )
 
 # Tabla variante de productos
@@ -102,7 +99,7 @@ class ProductVariant(Base):
 
     product = relationship(
         "Product",
-        primaryjoin="ProductVariant.product_id == Product.id",
+        primaryjoin="foreign(ProductVariant.product_id) == Product.id",
         back_populates="variants",
         viewonly=True
     )
@@ -110,10 +107,9 @@ class ProductVariant(Base):
     # Relación con valores de la variante
     values = relationship(
         "VariantValue",
-        primaryjoin="ProductVariant.id == VariantValue.variant_id",
+        primaryjoin="ProductVariant.id == foreign(VariantValue.variant_id)",
         back_populates="variant",
-        viewonly=True,
-        cascade="all, delete"
+        viewonly=True
     )
 
     # Columna para estado de la variante
@@ -139,7 +135,7 @@ class ProductOption(Base):
     # Relación con producto
     product = relationship(
         "Product",
-        primaryjoin="ProductOption.product_id == Product.id",
+        primaryjoin="foreign(ProductOption.product_id) == Product.id",
         back_populates="options",
         viewonly=True
     )
@@ -147,10 +143,9 @@ class ProductOption(Base):
     # Relación con valores
     values = relationship(
         "ProductOptionValue",
-        primaryjoin="ProductOption.id == ProductOptionValue.option_id",
+        primaryjoin="ProductOption.id == foreign(ProductOptionValue.option_id)",
         back_populates="option",
-        viewonly=True,
-        cascade="all, delete"
+        viewonly=True
     )
 
 # Clase Valores de opcion del producto (Rojo, M, etc)
@@ -167,7 +162,7 @@ class ProductOptionValue(Base):
     # Relación con opción
     option = relationship(
         "ProductOption",
-        primaryjoin="ProductOptionValue.option_id == ProductOption.id",
+        primaryjoin="foreign(ProductOptionValue.option_id) == ProductOption.id",
         back_populates="values",
         viewonly=True
     )
@@ -184,7 +179,7 @@ class VariantValue(Base):
     # Relación con variante
     variant = relationship(
         "ProductVariant",
-        primaryjoin="VariantValue.variant_id == ProductVariant.id",
+        primaryjoin="foreign(VariantValue.variant_id) == ProductVariant.id",
         back_populates="values",
         viewonly=True
     )
@@ -192,7 +187,7 @@ class VariantValue(Base):
     # Relación con valor de opción
     option_value = relationship(
         "ProductOptionValue",
-        primaryjoin="VariantValue.option_value_id == ProductOptionValue.id",
+        primaryjoin="foreign(VariantValue.option_value_id) == ProductOptionValue.id",
         viewonly=True
     )
 
@@ -220,7 +215,7 @@ class ProductImage(Base):
     # Relación con producto
     product = relationship(
         "Product",
-        primaryjoin="ProductImage.product_id == Product.id",
+        primaryjoin="foreign(ProductImage.product_id) == Product.id",
         back_populates="images",
         viewonly=True
     )
