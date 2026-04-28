@@ -15,7 +15,7 @@ from moduls.products.api.product_image import router as product_image_router
 from moduls.products.api.product_variant import router as product_variant_router
 #Importamos los endpoints de gestion de pedidos
 from moduls.orders.api.order_api import router as order_router
-# IMPORTANTE: solo por side effects (registro de ORM)
+#Para registro ORM en lambda
 from moduls.users.modules import *
 from moduls.stores.modules import *
 from moduls.products.modules import *
@@ -30,7 +30,11 @@ app = FastAPI(
 #Configuramos CORS para que el frontend pueda acceder
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],         
+    allow_origins=[
+        "https://luvrane.com",
+        "https://www.luvrane.com",
+        "https://luvrane-front-84kg-git-main-zakariakebour-archs-projects.vercel.app"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
