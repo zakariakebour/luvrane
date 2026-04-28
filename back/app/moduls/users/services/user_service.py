@@ -98,7 +98,7 @@ async def google_login_service(db, code: str):
     google_tokens = await exchange_google_code(code)
 
     #Verificamos el token y obtenemos datos del usuario de Google
-    google_user = await verify_google_token(google_tokens["id_token"])
+    google_user = verify_google_token(google_tokens["id_token"])
 
     #Buscamos si el usuario ya existe en nuestra DB por email
     user = get_user_by_email(db, google_user["email"])

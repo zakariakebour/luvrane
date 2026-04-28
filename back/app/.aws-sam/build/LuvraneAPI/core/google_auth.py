@@ -26,7 +26,7 @@ async def exchange_google_code(code: str) -> dict:
         return response.json()
 
 #Metodo para verificar el token de google y obtener datos del usuario
-async def verify_google_token(id_token_str: str) -> dict:
+def verify_google_token(id_token_str: str) -> dict:
     try:
         #Verificamos el token con Google
         idinfo = id_token.verify_oauth2_token(

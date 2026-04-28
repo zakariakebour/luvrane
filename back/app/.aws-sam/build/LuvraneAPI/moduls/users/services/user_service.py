@@ -98,7 +98,7 @@ async def google_login_service(db, code: str):
     google_tokens = await exchange_google_code(code)
 
     #Verificamos el token y obtenemos datos del usuario de Google
-    google_user = verify_google_token(google_tokens["id_token"])
+    google_user = await verify_google_token(google_tokens["id_token"])
 
     #Buscamos si el usuario ya existe en nuestra DB por email
     user = get_user_by_email(db, google_user["email"])
@@ -210,4 +210,3 @@ def change_password_service(db, user_id: str, password_data):
     user_dict = {"hashed_password": hash_password(password_data.new_password)}
 
     return update_user(db, user, user_dict)
-
