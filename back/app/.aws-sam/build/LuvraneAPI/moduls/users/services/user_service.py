@@ -22,7 +22,8 @@ from core.exceptions import (
 )
 #Importamos metodos de Google OAuth
 from core.google_auth import exchange_google_code, verify_google_token  
-
+import uuid
+from moduls.users.modules import UserRole  
 #Metodo para crear usuario
 def create_user_service(db, user_data):
     #Comprobamos que el email no exista ya
@@ -93,46 +94,55 @@ def refresh_token_service(refresh_token: str):
     }
 
 #Metodo para login con Google OAuth completo
-async def google_login_service(db, code: str):               
-    #Intercambiamos el code por tokens de Google
+async def google_login_service(db, code: str, role: UserRole = UserRole.customer): 
+    # Intercambiamos el code por tokens de Google
     google_tokens = await exchange_google_code(code)
 
-    #Verificamos el token y obtenemos datos del usuario de Google
-    google_user = await verify_google_token(google_tokens["id_token"])
+    # Verificamos el token (usando tu método que ya comprueba email_verified)
+    google_user = verify_google_token(google_tokens["id_token"])
 
-    #Buscamos si el usuario ya existe en nuestra DB por email
+    # Buscamos si el usuario ya existe en nuestra DB por email
     user = get_user_by_email(db, google_user["email"])
 
-    #Si no existe lo creamos automaticamente
     if not user:
-        #Generamos username desde el nombre de Google
-        base_username = google_user["name"].replace(" ", "_").lower()
+        # El usuario no exsiste, le creamos el role segun lo seleccionado
+        name = google_user.get("name") or google_user.get("email").split("@")[0]
+        base_username = name.replace(" ", "_").lower()
 
-        #Comprobamos que el username no exista ya
-        existing = get_user_by_name(db, base_username)
-        if existing:
-            base_username = f"{base_username}_{google_user['sub'][:5]}" 
+        username = base_username
+        while get_user_by_name(db, username):
+            username = f"{base_username}_{str(uuid.uuid4())[:5]}"
 
         user_dict = {
             "email": google_user["email"],
-            "username": base_username,
-            "hashed_password": "",
+            "username": username,
+            "hashed_password": "", 
             "google_id": google_user["sub"],
             "avatar": google_user.get("picture"),
             "auth_provider": "google",
+            "role": role, 
             "is_active": True
         }
         user = create_user(db, user_dict)
+    
+    else:
+        # Si no tiene google_id, lo vinculamos (esto evita el conflicto con cuentas manuales)
+        if not user.google_id:
+            user_data_update = {
+                "google_id": google_user["sub"],
+                "auth_provider": "google",
+                "avatar": google_user.get("picture") if not user.avatar else user.avatar
+            }
+            user = update_user(db, user, user_data_update)
 
-    #Si la cuenta esta desactivada
+    # 4. Comprobamos si la cuenta está activa
     if not user.is_active:
         raise ForbiddenException("Compte désactivé")
 
-    #Generamos nuestros propios JWT igual que el login normal
-    access_token = create_access_token(user.id, user.role.value)  
+    #Generamos tus tokens JWT
+    access_token = create_access_token(user.id, user.role.value)
     refresh_token = create_refresh_token(user.id)
 
-    #Devolvemos los tokens
     return {
         "access_token": access_token,
         "refresh_token": refresh_token,

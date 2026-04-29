@@ -40,7 +40,7 @@ def refresh(data: RefreshTokenData):
 #Endpoint para login con Google — publico
 @router.post("/auth/google")
 async def google_login(data: GoogleCodeData, db: Session = Depends(get_db)):
-    return await google_login_service(db, data.code)
+    return await google_login_service(db, data.code, data.role)
 
 #Endpoint callback de Google — Google redirige aquí con el code
 @router.get("/auth/google/callback")

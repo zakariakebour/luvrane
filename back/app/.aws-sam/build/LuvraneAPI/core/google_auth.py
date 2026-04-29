@@ -26,26 +26,28 @@ async def exchange_google_code(code: str) -> dict:
         return response.json()
 
 #Metodo para verificar el token de google y obtener datos del usuario
+
 def verify_google_token(id_token_str: str) -> dict:
     try:
-        #Verificamos el token con Google
         idinfo = id_token.verify_oauth2_token(
             id_token_str,
             requests.Request(),
             GOOGLE_CLIENT_ID
         )
 
-        #Comprobamos que el token es para nuestra app
         if idinfo.get("aud") != GOOGLE_CLIENT_ID:
             raise UnauthorizedException("Token Google invalide")
 
-        # Validar issuer
-        if idinfo.get("iss") not in ["accounts.google.com", "https://accounts.google.com"]:
+        if idinfo.get("iss") not in [
+            "accounts.google.com",
+            "https://accounts.google.com"
+        ]:
             raise UnauthorizedException("Token Google invalide")
 
-        # Validar expiración (aunque la librería ya lo hace, lo dejamos explícito)
-        if "exp" not in idinfo:
-            raise UnauthorizedException("Token Google invalide")
+        if not idinfo.get("email_verified"):
+            raise UnauthorizedException(
+                "Email Google non vérifié"
+            )
 
         return idinfo
 

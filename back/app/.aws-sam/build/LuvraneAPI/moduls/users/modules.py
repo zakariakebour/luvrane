@@ -5,7 +5,8 @@ from core.database import Base
 from datetime import datetime, timezone
 import enum
 import uuid
-
+from typing import Optional
+from pydantic import BaseModel
 
 class UserRole(enum.Enum):
     admin = "admin"
@@ -76,6 +77,14 @@ class User(Base):
         viewonly=True
     )
 
+    #Identificador de Google para OAuth
+    google_id = Column(String(255), unique=True, nullable=True)
+
+    #Foto de perfil de Google
+    avatar = Column(String(255), nullable=True)
+
+    #Proveedor de autenticacion (local o google)
+    auth_provider = Column(String(50), default="local")
 
 # Tabla de direcciones del usuario, un usuario puede tener varias direcciones
 class UserAddress(Base):
@@ -183,3 +192,7 @@ class ProductLike(Base):
 
     # Fecha en que se dio like
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+class GoogleCodeData(BaseModel):
+    code: str
+    role: Optional[UserRole] = None

@@ -131,3 +131,5 @@ class RefreshTokenData(BaseModel):
 #Schema de Google code inline
 class GoogleCodeData(BaseModel):
     code: str
+
+    role: Optional[UserRole] = None
