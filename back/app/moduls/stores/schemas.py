@@ -36,7 +36,7 @@ class StoreResponse(BaseModel):
     description: Optional[str]
     photo_profile: Optional[str]
     image: Optional[str]
-    products: List = []  
+    products: List[dict] = Field(default_factory=list)
     type: str
     is_active: bool
     created_at: Optional[datetime] = None
