@@ -40,7 +40,6 @@ class StoreResponse(BaseModel):
     type: str
     is_active: bool
     created_at: Optional[datetime] = None
-    products: List[dict] = []
 
     class Config:
         from_attributes = True
