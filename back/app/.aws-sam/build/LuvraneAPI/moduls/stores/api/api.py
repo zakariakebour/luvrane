@@ -7,7 +7,8 @@ from moduls.stores.services import (
     get_store_by_name_service,
     get_stores_service,
     update_store_service,
-    delete_store_service
+    delete_store_service,
+    get_my_store_service
 )
 from core.database import get_db
 from core.dependencies import get_current_user              
@@ -57,3 +58,11 @@ def delete_store(
     current_user: User = Depends(get_current_user)            
 ):
     return delete_store_service(db, store_id, current_user.id)
+
+#Endpoint para obtener la tienda del usuario autenticado — protegido
+@router.get("/me", response_model=StoreResponse)
+def get_my_store(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return get_my_store_service(db, current_user.id)

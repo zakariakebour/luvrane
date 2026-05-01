@@ -220,3 +220,5 @@ def change_password_service(db, user_id: str, password_data):
     user_dict = {"hashed_password": hash_password(password_data.new_password)}
 
     return update_user(db, user, user_dict)
+
+

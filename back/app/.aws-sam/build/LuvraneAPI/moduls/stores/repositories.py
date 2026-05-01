@@ -59,3 +59,11 @@ def update_store(db: Session, store: Store, store_data: dict) -> Store:  #Recibe
     db.refresh(store)
 
     return store
+
+#Metodo para seleccionar la tienda segun el identificador del usuario propietario
+def get_store_by_owner_id(db: Session, owner_id: str) -> Store:
+    #Hacemos la consulta filtrando por el owner_id
+    return db.query(Store).filter(
+        Store.owner_id == owner_id,
+        Store.is_active == True
+    ).first()
