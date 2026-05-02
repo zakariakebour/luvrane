@@ -14,6 +14,8 @@ from core.exceptions import (
     ConflictException,
     ForbiddenException
 )
+#Importamos metodo que genera URL presignada para archivos (imagenes,videos)
+from core.s3 import generate_presigned_url
 
 # Metodo para crear tienda
 def create_store_service(db, store_data, owner_id):
@@ -113,3 +115,24 @@ def get_my_store_service(db, owner_id: str):
     if not store:
         raise NotFoundException("Boutique introuvable")
     return store
+
+#Metodo para generar firmas de videos e imagenes para subir de tiendas
+def generate_store_presigned_url_service(data):
+    #Determinamos la carpeta segun el tipo de imagen
+    if data.image_type == "profile":
+        #Solo imagenes para el perfil
+        if data.content_type not in ["image/jpeg", "image/png", "image/webp"]:
+            raise ValidationException("Solo imágenes para el perfil") 
+        folder = "stores/profiles"
+    else:
+        folder = "stores/covers"
+
+    #Generamos la URL firmada
+    result = generate_presigned_url(folder, data.content_type)
+
+    return {
+        "presigned_url": result["presigned_url"],
+        "public_url": result["public_url"],
+        "image_type": data.image_type,
+        "media_type": result["media_type"]
+    }

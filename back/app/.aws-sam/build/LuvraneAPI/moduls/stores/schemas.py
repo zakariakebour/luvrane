@@ -63,3 +63,31 @@ class UpdateStore(BaseModel):
         if value is not None:
             return value.strip()
         return value
+
+#Schema para solicitar URL firmada para foto de perfil o imagen de portada
+class StoreImagePresignedRequest(BaseModel):
+    content_type: str = Field(..., description="image/jpeg, image/png, image/webp, video/mp4")
+    image_type: str = Field(..., description="profile o cover")
+
+    @field_validator("content_type")
+    @classmethod
+    def validate_content_type(cls, value):
+        allowed = ["image/jpeg", "image/png", "image/webp", "video/mp4", "video/quicktime"]  # ✅ añadir videos
+        if value not in allowed:
+            raise ValueError("Type de fichier non autorisé")
+        return value
+
+    @field_validator("image_type")
+    @classmethod
+    def validate_image_type(cls, value):
+        allowed = ["profile", "cover"]
+        if value not in allowed:
+            raise ValueError("Type d'image invalide, utilisez 'profile' ou 'cover'")
+        return value
+
+#Schema de respuesta de URL firmada
+class StoreImagePresignedResponse(BaseModel):
+    presigned_url: str
+    public_url: str
+    image_type: str
+    media_type: str        # ✅ añadir para saber si es imagen o video

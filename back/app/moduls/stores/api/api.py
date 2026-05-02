@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from moduls.stores.schemas import CreateStore, StoreResponse, StoresPageResponse, UpdateStore
+from moduls.stores.schemas import CreateStore, StoreResponse, StoresPageResponse, UpdateStore,StoreImagePresignedRequest,StoreImagePresignedResponse
 from moduls.stores.services import (
     create_store_service,
     get_store_by_id_service,
@@ -8,7 +8,8 @@ from moduls.stores.services import (
     get_stores_service,
     update_store_service,
     delete_store_service,
-    get_my_store_service
+    get_my_store_service,
+    generate_store_presigned_url_service
 )
 from core.database import get_db
 from core.dependencies import get_current_user              
@@ -24,6 +25,14 @@ def create_store(
     current_user: User = Depends(get_current_user)     
 ):
     return create_store_service(db, store, current_user.id)  
+
+#Endpoint para generar URL firmada para subir imagen/video de tienda
+@router.post("/upload-url", response_model=StoreImagePresignedResponse)
+def get_store_upload_url(
+    data: StoreImagePresignedRequest,
+    current_user: User = Depends(get_current_user)
+):
+    return generate_store_presigned_url_service(data) 
 
 #Endpoint que muestra todas las tiendas disponibles — publico
 @router.get("/", response_model=StoresPageResponse)
@@ -66,4 +75,3 @@ def delete_store(
     current_user: User = Depends(get_current_user)            
 ):
     return delete_store_service(db, store_id, current_user.id)
-
