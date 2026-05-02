@@ -72,7 +72,7 @@ class StoreImagePresignedRequest(BaseModel):
     @field_validator("content_type")
     @classmethod
     def validate_content_type(cls, value):
-        allowed = ["image/jpeg", "image/png", "image/webp", "video/mp4", "video/quicktime"]  # ✅ añadir videos
+        allowed = ["image/jpeg", "image/png", "image/webp", "video/mp4", "video/quicktime"] 
         if value not in allowed:
             raise ValueError("Type de fichier non autorisé")
         return value
@@ -90,4 +90,4 @@ class StoreImagePresignedResponse(BaseModel):
     presigned_url: str
     public_url: str
     image_type: str
-    media_type: str        # ✅ añadir para saber si es imagen o video
+    media_type: str        
