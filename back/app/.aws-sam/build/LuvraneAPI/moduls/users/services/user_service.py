@@ -24,6 +24,7 @@ from core.exceptions import (
 from core.google_auth import exchange_google_code, verify_google_token  
 import uuid
 from moduls.users.modules import UserRole  
+
 #Metodo para crear usuario
 def create_user_service(db, user_data):
     #Comprobamos que el email no exista ya

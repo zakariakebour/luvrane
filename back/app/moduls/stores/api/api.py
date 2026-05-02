@@ -30,7 +30,15 @@ def create_store(
 def get_stores(skip: int = 0, limit: int = 20, db: Session = Depends(get_db)):
     return get_stores_service(db, skip=skip, limit=limit)
 
-#Endpoint para buscar tienda segun nombre<
+#Endpoint para obtener la tienda del usuario autenticado — protegido
+@router.get("/me", response_model=StoreResponse)
+def get_my_store(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return get_my_store_service(db, current_user.id)
+
+#Endpoint para buscar tienda segun nombre
 @router.get("/search", response_model=StoreResponse)
 def get_store_by_name(name: str, db: Session = Depends(get_db)):
     return get_store_by_name_service(db, name)
@@ -59,10 +67,3 @@ def delete_store(
 ):
     return delete_store_service(db, store_id, current_user.id)
 
-#Endpoint para obtener la tienda del usuario autenticado — protegido
-@router.get("/me", response_model=StoreResponse)
-def get_my_store(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    return get_my_store_service(db, current_user.id)
