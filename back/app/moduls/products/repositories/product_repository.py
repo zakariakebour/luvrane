@@ -33,10 +33,13 @@ def get_product_by_id(db: Session,product_id: str):
     #Hacemos la consulta y devolvemos resultado
     return db.query(Product).filter(Product.id == product_id).first()
 
-#Metodo para buscar producto segun nombre
-def get_product_by_name(db: Session,product_name: str):
-    #Hacemos la consulta segun el nombre
-    return db.query(Product).filter(Product.name == product_name).first()
+#Metodo para buscar producto segun nombre (busqueda flexible)
+def get_product_by_name(db: Session, product_name: str):
+    #ilike = insensible a mayusculas + % permite busqueda parcial
+    return db.query(Product).filter(
+        Product.name.ilike(f"%{product_name}%"),
+        Product.is_active == True
+    ).all()                      
 
 #Metodo para selccionar producto segun nombre y su tienda
 def get_product_by_name_and_store(db: Session,product_name: str,store_id: str):

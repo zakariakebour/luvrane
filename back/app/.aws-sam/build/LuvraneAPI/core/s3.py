@@ -7,7 +7,7 @@ from botocore.config import Config
 #Creamos el cliente de S3
 s3_client = boto3.client(
     "s3",
-    region_name=AWS_S3_REGION,
+    region_name=AWS_S3_REGION,    
 )
 
 #Tipos de archivos permitidos

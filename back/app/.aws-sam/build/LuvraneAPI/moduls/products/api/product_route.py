@@ -12,7 +12,8 @@ from moduls.products.services.product_service import (
     update_product_service,
     delete_product_service,
     get_product_status_service,
-    update_product_status_service
+    update_product_status_service,
+    get_products_by_store_service
 )
 #Importamos base de datos
 from core.database import get_db
@@ -24,7 +25,6 @@ from moduls.users.modules import User
 from moduls.products.modules import ProductStatus
 #Importamos schema de paginacion
 from pydantic import BaseModel
-
 router = APIRouter(tags=["Products"])
 
 #Endpoint para crear producto — protegido solo owners
@@ -36,6 +36,16 @@ def create_product(
 ):
     return create_product_service(db, product_data, current_user.id)
 
+# Endpoint para listar productos de una tienda concreta — publico
+@router.get("/store/{store_id}", response_model=ProductsPageResponse)
+def get_products_by_store(
+    store_id: str,
+    skip: int = 0,
+    limit: int = 20,
+    db: Session = Depends(get_db)
+):
+    return get_products_by_store_service(db, store_id, skip=skip, limit=limit)
+
 #Endpoint para listar productos con paginacion — publico
 @router.get("/", response_model=ProductsPageResponse)
 def get_products(
@@ -46,12 +56,31 @@ def get_products(
     return get_products_service(db, skip=skip, limit=limit)
 
 #Endpoint para buscar producto por nombre — publico
-@router.get("/search", response_model=ProductResponse)
+@router.get("/search", response_model=List[ProductResponse])
 def get_product_by_name(
     name: str,
     db: Session = Depends(get_db)
 ):
     return get_product_by_name_service(db, name)
+
+#Endpoint para consultar estado del producto — protegido
+@router.get("/{product_id}/status")
+def get_product_status(
+    product_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return get_product_status_service(db, product_id)
+
+#Endpoint para actualizar estado del producto — protegido solo owners
+@router.patch("/{product_id}/status")
+def update_product_status(
+    product_id: str,
+    status: ProductStatus,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return update_product_status_service(db, product_id, status, current_user.id)
 
 #Endpoint para obtener producto por ID — publico
 @router.get("/{product_id}", response_model=ProductResponse)
@@ -79,22 +108,3 @@ def delete_product(
     current_user: User = Depends(get_current_user)
 ):
     return delete_product_service(db, product_id, current_user.id)
-
-#Endpoint para consultar estado del producto — protegido
-@router.get("/{product_id}/status")
-def get_product_status(
-    product_id: str,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    return get_product_status_service(db, product_id)
-
-#Endpoint para actualizar estado del producto — protegido solo owners
-@router.patch("/{product_id}/status")
-def update_product_status(
-    product_id: str,
-    status: ProductStatus,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    return update_product_status_service(db, product_id, status, current_user.id)

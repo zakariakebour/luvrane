@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List
 from datetime import datetime
+from moduls.products.schemas import ProductResponse
 
 #Clase completa para validacion de entrada y salida de los datos para la creacion de la tienda
 class CreateStore(BaseModel):
@@ -36,7 +37,7 @@ class StoreResponse(BaseModel):
     description: Optional[str]
     photo_profile: Optional[str]
     image: Optional[str]
-    products: List[dict] = Field(default_factory=list)
+    products: List[ProductResponse] = Field(default_factory=list)
     type: str
     is_active: bool
     created_at: Optional[datetime] = None

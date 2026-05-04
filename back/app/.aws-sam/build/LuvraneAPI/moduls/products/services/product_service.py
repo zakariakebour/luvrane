@@ -1,5 +1,5 @@
 #Importamos repositorio de producto
-from moduls.products.repositories.product_repository import get_product_by_id,get_products,get_product_by_name,create_product,update_product,delete_product,get_product_by_name_and_store,update_product_status,get_product_status
+from moduls.products.repositories.product_repository import get_product_by_id,get_products,get_product_by_name,create_product,update_product,delete_product,get_product_by_name_and_store,update_product_status,get_product_status,get_products_by_store
 #Importamos el metodo de selccion de la tienda
 from moduls.stores.repositories import select_store_by_id
 #Importamos excepciones
@@ -47,14 +47,11 @@ def get_product_by_id_service(db,product_id: str):
     return product
 
 #Metodo para buscar el producto con el nombre
-def get_product_by_name_service(db,product_name):
-    #Realizamos la consulta del producto con el nombre recibido y comprobar si exsiste
-    product = get_product_by_name(db,product_name)
-    if not product:
+def get_product_by_name_service(db, product_name: str):
+    products = get_product_by_name(db, product_name.strip())
+    if not products:
         raise NotFoundException("Produit non disponible")
-    
-    #Devolvemos el producto
-    return product
+    return products
 
 #Metodo para listar productos con paginacion
 def get_products_service(db,skip,limit):
@@ -129,3 +126,12 @@ def get_product_status_service(db,product_id: str):
     #Devolvemos el estado del producto
     return {"status":product.status}
 
+# Metodo para listar productos de una tienda concreta
+def get_products_by_store_service(db, store_id: str, skip: int = 0, limit: int = 20):
+    store = select_store_by_id(db, store_id)
+    if not store:
+        raise NotFoundException("Boutique introuvable")
+    
+    #Comprobamos si algun producto de esa tienda esta desactivado/eliminar
+    
+    return get_products_by_store(db, store_id, skip=skip, limit=limit)

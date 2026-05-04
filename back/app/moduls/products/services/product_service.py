@@ -47,14 +47,11 @@ def get_product_by_id_service(db,product_id: str):
     return product
 
 #Metodo para buscar el producto con el nombre
-def get_product_by_name_service(db,product_name):
-    #Realizamos la consulta del producto con el nombre recibido y comprobar si exsiste
-    product = get_product_by_name(db,product_name)
-    if not product:
+def get_product_by_name_service(db, product_name: str):
+    products = get_product_by_name(db, product_name.strip())
+    if not products:
         raise NotFoundException("Produit non disponible")
-    
-    #Devolvemos el producto
-    return product
+    return products
 
 #Metodo para listar productos con paginacion
 def get_products_service(db,skip,limit):
@@ -134,4 +131,7 @@ def get_products_by_store_service(db, store_id: str, skip: int = 0, limit: int =
     store = select_store_by_id(db, store_id)
     if not store:
         raise NotFoundException("Boutique introuvable")
+    
+    #Comprobamos si algun producto de esa tienda esta desactivado/eliminar
+    
     return get_products_by_store(db, store_id, skip=skip, limit=limit)

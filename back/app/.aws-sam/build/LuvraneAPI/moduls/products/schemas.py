@@ -3,11 +3,9 @@ from typing import Optional, List
 from decimal import Decimal
 
 
-# Validacion de imagen de producto
 class ProductImageBase(BaseModel):
     image_url: HttpUrl
     position: int = 0
-
 
 class ProductImageCreate(ProductImageBase):
     pass
@@ -18,9 +16,9 @@ class ProductImageResponse(ProductImageBase):
     class Config:
         from_attributes = True
 
+
 class VariantValueBase(BaseModel):
     option_value_id: str
-
 
 class VariantValueCreate(VariantValueBase):
     pass
@@ -31,11 +29,11 @@ class VariantValueResponse(VariantValueBase):
     class Config:
         from_attributes = True
 
+
 class ProductVariantBase(BaseModel):
     stock: int = 0
     price: Optional[Decimal] = None
     sku: str
-    signature: str
 
     @field_validator("stock")
     @classmethod
@@ -61,14 +59,17 @@ class ProductVariantBase(BaseModel):
 
 class ProductVariantCreate(ProductVariantBase):
     option_value_ids: List[str] = []
+    attributes: dict = {}
 
 class ProductVariantResponse(ProductVariantBase):
     id: str
+    signature: str
     is_active: bool
     values: List[VariantValueResponse] = []
 
     class Config:
         from_attributes = True
+
 
 class ProductBase(BaseModel):
     name: str = Field(..., min_length=2, max_length=255)
@@ -98,7 +99,7 @@ class ProductCreate(ProductBase):
     variants: Optional[List[ProductVariantCreate]] = []
 
 class ProductUpdate(BaseModel):
-    name: Optional[str]
+    name: Optional[str] = None
     description: Optional[str] = None
     price: Optional[Decimal] = None
 
@@ -125,32 +126,26 @@ class ProductResponse(ProductBase):
     store_id: str
     images: List[ProductImageResponse] = []
     variants: List[ProductVariantResponse] = []
-    is_active: bool                
-    status: str                       
-    created_at: Optional[str] = None   
+    is_active: bool
+    status: str
+    created_at: Optional[str] = None
+
     class Config:
         from_attributes = True
 
-#Schema para actualizar posicion
-class UpdatePosition(BaseModel):
-    position: int
 
-#Schema para solicitar URL firmada
-class PresignedUrlRequest(BaseModel):
-    content_type: str 
-    folder: str         
-
-#Schema de respuesta de URL firmada
-class PresignedUrlResponse(BaseModel):
-    presigned_url: str   
-    public_url: str    
-    media_type: str     
-
-#Schema para actualizar posicion
 class UpdatePosition(BaseModel):
     position: int = Field(..., ge=0)
 
-# Schema de paginacion de productos
+class PresignedUrlRequest(BaseModel):
+    content_type: str
+    folder: str
+
+class PresignedUrlResponse(BaseModel):
+    presigned_url: str
+    public_url: str
+    media_type: str
+
 class ProductsPageResponse(BaseModel):
     total: int
     products: List[ProductResponse]

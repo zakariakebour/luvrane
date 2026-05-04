@@ -40,6 +40,9 @@ def add_product_image_service(db, product_id: str, image_data, current_user_id: 
     #Convertimos a diccionario
     image_dict = image_data.model_dump()                  
 
+    #Convertimos a String
+    image_dict["image_url"] = str(image_dict["image_url"])
+    
     #Añadimos la imagen o video
     return add_product_image(db, product_id, image_dict)  
 
