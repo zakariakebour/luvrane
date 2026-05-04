@@ -12,7 +12,8 @@ from moduls.products.services.product_service import (
     update_product_service,
     delete_product_service,
     get_product_status_service,
-    update_product_status_service
+    update_product_status_service,
+    get_products_by_store_service
 )
 #Importamos base de datos
 from core.database import get_db
@@ -35,7 +36,16 @@ def create_product(
     current_user: User = Depends(get_current_user)
 ):
     return create_product_service(db, product_data, current_user.id)
-
+# Endpoint para listar productos de una tienda concreta — publico
+@router.get("/store/{store_id}", response_model=ProductsPageResponse)
+def get_products_by_store(
+    store_id: str,
+    skip: int = 0,
+    limit: int = 20,
+    db: Session = Depends(get_db)
+):
+        return get_products_by_store_service(db, store_id, skip=skip, limit=limit)
+    
 #Endpoint para listar productos con paginacion — publico
 @router.get("/", response_model=ProductsPageResponse)
 def get_products(
