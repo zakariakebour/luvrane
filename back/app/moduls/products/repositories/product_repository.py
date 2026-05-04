@@ -84,3 +84,8 @@ def update_product_status(db: Session, product: Product, status: ProductStatus) 
     db.refresh(product)
     return product
 
+# Metodo para listar productos de una tienda concreta
+def get_products_by_store(db: Session, store_id: str, skip: int = 0, limit: int = 20) -> dict:
+    total = db.query(Product).filter(Product.store_id == store_id, Product.is_active == True).count()
+    products = db.query(Product).filter(Product.store_id == store_id, Product.is_active == True).offset(skip).limit(limit).all()
+    return {"total": total, "products": products}
