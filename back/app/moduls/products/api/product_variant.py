@@ -32,14 +32,15 @@ def add_variant(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    data = variant_data.model_dump(exclude={"option_value_ids", "attributes"})
     return add_product_variant_service(
         db,
-        variant_data.model_dump(exclude={"option_value_ids"}),
+        data,
         variant_data.option_value_ids,
-        variant_data.model_dump(exclude={"stock", "price", "sku", "option_value_ids"}),
+        variant_data.attributes,
         product_id
     )
-
+    
 #Endpoint para obtener todas las variantes de un producto — publico
 @router.get("/{product_id}", response_model=List[ProductVariantResponse])
 def get_variants(
