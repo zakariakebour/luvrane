@@ -35,7 +35,6 @@ class ProductVariantBase(BaseModel):
     stock: int = 0
     price: Optional[Decimal] = None
     sku: str
-    signature: str
 
     @field_validator("stock")
     @classmethod
@@ -51,6 +50,26 @@ class ProductVariantBase(BaseModel):
             raise ValueError("Le prix doit être supérieur à 0")
         return value
 
+    @field_validator("sku")
+    @classmethod
+    def validate_sku(cls, value):
+        value = value.strip()
+        if len(value) < 2:
+            raise ValueError("SKU invalide")
+        return value
+
+class ProductVariantCreate(ProductVariantBase):
+    option_value_ids: List[str] = []
+    attributes: dict = {}
+
+class ProductVariantResponse(ProductVariantBase):
+    id: str
+    signature: str
+    is_active: bool
+    values: List[VariantValueResponse] = []
+
+    class Config:
+        from_attributes = True
     @field_validator("sku")
     @classmethod
     def validate_sku(cls, value):
