@@ -149,3 +149,43 @@ class PresignedUrlResponse(BaseModel):
 class ProductsPageResponse(BaseModel):
     total: int
     products: List[ProductResponse]
+
+class ProductOptionCreate(BaseModel):
+    name: str
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, value):
+        value = value.strip()
+        if len(value) < 2:
+            raise ValueError("Le nom de l'option doit contenir au moins 2 caractères")
+        return value
+
+class ProductOptionResponse(BaseModel):
+    id: str
+    product_id: str
+    name: str
+    values: List["ProductOptionValueResponse"] = []
+
+    class Config:
+        from_attributes = True
+
+#Opciones del producto
+class ProductOptionValueCreate(BaseModel):
+    value: str
+
+    @field_validator("value")
+    @classmethod
+    def validate_value(cls, value):
+        value = value.strip()
+        if len(value) < 1:
+            raise ValueError("La valeur ne peut pas être vide")
+        return value
+
+class ProductOptionValueResponse(BaseModel):
+    id: str
+    option_id: str
+    value: str
+
+    class Config:
+        from_attributes = True
