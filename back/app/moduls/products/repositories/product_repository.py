@@ -6,6 +6,8 @@ from sqlalchemy.orm import Session
 from datetime import datetime,timezone
 #Importamos estado del producto
 from moduls.products.modules import ProductStatus
+#Importamos Joineload
+from sqlalchemy.orm import joinedload
 
 #Creamos el metodo que se encarga de insertar los datos del producto creado
 def create_product(db: Session,product_data: dict) -> dict:
@@ -17,16 +19,17 @@ def create_product(db: Session,product_data: dict) -> dict:
     db.refresh(product)
     return product
 
-#Metodo para listar todos los productos
-def get_products(db: Session,skip: int=0,limit: int=20) -> dict:
-    #Total de productos para paginacion, filtramos por activos
-    total = db.query(Product).filter(Product.is_active == True).count()
+def get_products(db: Session, skip: int = 0, limit: int = 20) -> dict:
+    query = db.query(Product).options(
+        joinedload(Product.store)
+    ).filter(
+        Product.is_active == True
+    )
 
-    #productos a mostrar con paginacion, filtramos por activo
-    products = db.query(Product).filter(Product.is_active == True).offset(skip).limit(limit).all()
+    total = query.count()
+    products = query.offset(skip).limit(limit).all()
 
-    #Devolvemos resultado total y los productos
-    return {"total":total,"products":products}
+    return {"total": total, "products": products}
 
 #Metodo para seleccionar producto segun su identificador
 def get_product_by_id(db: Session,product_id: str):
@@ -87,8 +90,16 @@ def update_product_status(db: Session, product: Product, status: ProductStatus) 
     db.refresh(product)
     return product
 
-# Metodo para listar productos de una tienda concreta
-def get_products_by_store(db: Session, store_id: str, skip: int = 0, limit: int = 20) -> dict:
-    total = db.query(Product).filter(Product.store_id == store_id, Product.is_active == True).count()
-    products = db.query(Product).filter(Product.store_id == store_id, Product.is_active == True).offset(skip).limit(limit).all()
+# Metodo para actualizar estado del producto
+def get_products_by_store(db: Session, store_id: str, skip: int = 0, limit: int = 20):
+    query = db.query(Product).options(
+        joinedload(Product.store)
+    ).filter(
+        Product.store_id == store_id,
+        Product.is_active == True
+    )
+
+    total = query.count()
+    products = query.offset(skip).limit(limit).all()
+
     return {"total": total, "products": products}

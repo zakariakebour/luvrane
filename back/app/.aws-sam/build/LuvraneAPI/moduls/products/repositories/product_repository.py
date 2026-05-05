@@ -6,6 +6,8 @@ from sqlalchemy.orm import Session
 from datetime import datetime,timezone
 #Importamos estado del producto
 from moduls.products.modules import ProductStatus
+#Importamos Joineload
+from sqlalchemy.orm import joinedload
 
 #Creamos el metodo que se encarga de insertar los datos del producto creado
 def create_product(db: Session,product_data: dict) -> dict:
@@ -87,8 +89,16 @@ def update_product_status(db: Session, product: Product, status: ProductStatus) 
     db.refresh(product)
     return product
 
-# Metodo para listar productos de una tienda concreta
-def get_products_by_store(db: Session, store_id: str, skip: int = 0, limit: int = 20) -> dict:
-    total = db.query(Product).filter(Product.store_id == store_id, Product.is_active == True).count()
-    products = db.query(Product).filter(Product.store_id == store_id, Product.is_active == True).offset(skip).limit(limit).all()
+# Metodo para actualizar estado del producto
+def get_products_by_store(db: Session, store_id: str, skip: int = 0, limit: int = 20):
+    query = db.query(Product).options(
+        joinedload(Product.store)
+    ).filter(
+        Product.store_id == store_id,
+        Product.is_active == True
+    )
+
+    total = query.count()
+    products = query.offset(skip).limit(limit).all()
+
     return {"total": total, "products": products}

@@ -13,6 +13,7 @@ class ProductImageCreate(ProductImageBase):
 class ProductImageResponse(ProductImageBase):
     id: str
 
+    media_type: str 
     class Config:
         from_attributes = True
 
@@ -129,7 +130,6 @@ class ProductResponse(ProductBase):
     is_active: bool
     status: str
     created_at: Optional[str] = None
-
     class Config:
         from_attributes = True
 
@@ -189,3 +189,8 @@ class ProductOptionValueResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class UpdateStock(BaseModel):
+    stock: int
+

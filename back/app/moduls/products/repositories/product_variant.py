@@ -111,3 +111,20 @@ def delete_option_value(db: Session, value_id: str) -> None:
     if value:
         db.delete(value)
         db.commit()
+
+def get_option_values_by_ids(db: Session, ids: list[str]):
+    return db.query(ProductOptionValue).filter(
+        ProductOptionValue.id.in_(ids)
+    ).all()
+
+
+def get_option_by_id(db: Session, option_id: str):
+    return db.query(ProductOption).filter(
+        ProductOption.id == option_id
+    ).first()
+
+
+def get_options_by_product(db: Session, product_id: str):
+    return db.query(ProductOption).filter(
+        ProductOption.product_id == product_id
+    ).all()
