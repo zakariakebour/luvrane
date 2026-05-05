@@ -14,7 +14,13 @@ from moduls.products.repositories.product_variant import (
     create_option_value,
     get_values_by_option,
     get_option_value_by_id,
-    delete_option_value
+    delete_option_value,
+    create_product_option_service,
+    get_options_by_product_service,
+    delete_option_service,
+    create_option_value_service,
+    get_values_by_option_service,
+    delete_option_value_service
 )
 from moduls.products.repositories.product_repository import get_product_by_id
 from core.exceptions import NotFoundException, ConflictException, ValidationException
@@ -92,3 +98,54 @@ def delete_option_value_service(db: Session, value_id: str):
     if not value:
         raise NotFoundException("Valeur introuvable")
     delete_option_value(db, value_id)
+
+#Servicios para opciones de productos
+@router.post("/{product_id}/options", response_model=ProductOptionResponse, status_code=201)
+def create_option(
+    product_id: str,
+    option_data: ProductOptionCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return create_product_option_service(db, product_id, option_data.name)
+
+@router.get("/{product_id}/options", response_model=List[ProductOptionResponse])
+def get_options(
+    product_id: str,
+    db: Session = Depends(get_db)
+):
+    return get_options_by_product_service(db, product_id)
+
+@router.delete("/options/{option_id}", status_code=204)
+def delete_option(
+    option_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    delete_option_service(db, option_id)
+
+# ── ProductOptionValue endpoints ──
+
+@router.post("/options/{option_id}/values", response_model=ProductOptionValueResponse, status_code=201)
+def create_option_value(
+    option_id: str,
+    value_data: ProductOptionValueCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return create_option_value_service(db, option_id, value_data.value)
+
+@router.get("/options/{option_id}/values", response_model=List[ProductOptionValueResponse])
+def get_option_values(
+    option_id: str,
+    db: Session = Depends(get_db)
+):
+    return get_values_by_option_service(db, option_id)
+
+@router.delete("/options/values/{value_id}", status_code=204)
+def delete_option_value(
+    value_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    delete_option_value_service(db, value_id)
