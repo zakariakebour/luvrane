@@ -6,7 +6,15 @@ from moduls.products.repositories.product_variant import (
     get_product_variant_by_id,
     get_variant_by_signature,
     get_variants_by_product,
-    update_variant_stock
+    update_variant_stock,
+    create_product_option,
+    get_options_by_product,
+    get_option_by_id,
+    delete_option,
+    create_option_value,
+    get_values_by_option,
+    get_option_value_by_id,
+    delete_option_value
 )
 from moduls.products.repositories.product_repository import get_product_by_id
 from core.exceptions import NotFoundException, ConflictException, ValidationException
@@ -47,3 +55,40 @@ def update_variant_stock_service(db: Session, variant_id: str, stock: int):
     if stock < 0:
         raise ValidationException("Stock invalide")
     return update_variant_stock(db, variant_id, stock)
+
+#Metodos para opcion y su valor de un atributo
+def create_product_option_service(db: Session, product_id: str, name: str):
+    product = get_product_by_id(db, product_id)
+    if not product:
+        raise NotFoundException("Produit introuvable")
+    return create_product_option(db, product_id, name)
+
+def get_options_by_product_service(db: Session, product_id: str):
+    product = get_product_by_id(db, product_id)
+    if not product:
+        raise NotFoundException("Produit introuvable")
+    return get_options_by_product(db, product_id)
+
+def delete_option_service(db: Session, option_id: str):
+    option = get_option_by_id(db, option_id)
+    if not option:
+        raise NotFoundException("Option introuvable")
+    delete_option(db, option_id)
+
+def create_option_value_service(db: Session, option_id: str, value: str):
+    option = get_option_by_id(db, option_id)
+    if not option:
+        raise NotFoundException("Option introuvable")
+    return create_option_value(db, option_id, value)
+
+def get_values_by_option_service(db: Session, option_id: str):
+    option = get_option_by_id(db, option_id)
+    if not option:
+        raise NotFoundException("Option introuvable")
+    return get_values_by_option(db, option_id)
+
+def delete_option_value_service(db: Session, value_id: str):
+    value = get_option_value_by_id(db, value_id)
+    if not value:
+        raise NotFoundException("Valeur introuvable")
+    delete_option_value(db, value_id)
