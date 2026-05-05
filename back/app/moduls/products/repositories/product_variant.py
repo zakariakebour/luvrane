@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 from moduls.products.modules import ProductVariant, VariantValue
+from moduls.products.modules import ProductOption, ProductOptionValue
 
 def add_product_variant(db: Session, product_id: str, variant_data: dict, option_value_ids: list[str]) -> ProductVariant:
     variant = ProductVariant(
@@ -65,3 +66,48 @@ def update_product_variant(db: Session, variant_id: str, variant_data: dict) -> 
     db.commit()
     db.refresh(variant)
     return variant
+
+#Metodos para Opciones y sus valores en las variantes de un producto
+def create_product_option(db: Session, product_id: str, name: str) -> ProductOption:
+    option = ProductOption(
+        product_id=product_id,
+        name=name.strip()
+    )
+    db.add(option)
+    db.commit()
+    db.refresh(option)
+    return option
+
+def get_options_by_product(db: Session, product_id: str):
+    return db.query(ProductOption).filter(ProductOption.product_id == product_id).all()
+
+def get_option_by_id(db: Session, option_id: str) -> ProductOption:
+    return db.query(ProductOption).filter(ProductOption.id == option_id).first()
+
+def delete_option(db: Session, option_id: str) -> None:
+    option = db.query(ProductOption).filter(ProductOption.id == option_id).first()
+    if option:
+        db.delete(option)
+        db.commit()
+
+def create_option_value(db: Session, option_id: str, value: str) -> ProductOptionValue:
+    option_value = ProductOptionValue(
+        option_id=option_id,
+        value=value.strip()
+    )
+    db.add(option_value)
+    db.commit()
+    db.refresh(option_value)
+    return option_value
+
+def get_values_by_option(db: Session, option_id: str):
+    return db.query(ProductOptionValue).filter(ProductOptionValue.option_id == option_id).all()
+
+def get_option_value_by_id(db: Session, value_id: str) -> ProductOptionValue:
+    return db.query(ProductOptionValue).filter(ProductOptionValue.id == value_id).first()
+
+def delete_option_value(db: Session, value_id: str) -> None:
+    value = db.query(ProductOptionValue).filter(ProductOptionValue.id == value_id).first()
+    if value:
+        db.delete(value)
+        db.commit()
