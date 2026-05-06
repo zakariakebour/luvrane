@@ -61,9 +61,15 @@ def delete_file(file_url: str) -> None:
     if not file_url:
         return
     try:
-        key = file_url.split(f"{AWS_S3_BUCKET}.s3.{AWS_S3_REGION}.amazonaws.com/")[1]
+        # Intentamos extraer el key de cualquier formato de URL de S3
+        if ".amazonaws.com/" in file_url:
+            key = file_url.split(".amazonaws.com/")[1]
+        else:
+            print(f"[S3] Formato de URL no reconocido: {file_url}")
+            return
         s3_client.delete_object(Bucket=AWS_S3_BUCKET, Key=key)
+        print(f"[S3] Archivo eliminado: {key}")
     except IndexError:
-        print(f"[S3] URL mal formateada, no se pudo extraer el key: {file_url}")
+        print(f"[S3] No se pudo extraer el key de: {file_url}")
     except Exception as e:
-        print(f"[S3] Error al eliminar archivo: {e}")
+        print(f"[S3] Error al eliminar: {e}")
