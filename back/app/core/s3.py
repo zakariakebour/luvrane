@@ -58,6 +58,12 @@ def generate_presigned_url(folder: str, content_type: str, expires_in: int = 300
 
 #Metodo para eliminar archivo de S3
 def delete_file(file_url: str) -> None:
-    #Extraemos el key del archivo desde la URL
-    key = file_url.split(f"{AWS_S3_BUCKET}.s3.{AWS_S3_REGION}.amazonaws.com/")[1]
-    s3_client.delete_object(Bucket=AWS_S3_BUCKET, Key=key)
+    if not file_url:
+        return
+    try:
+        key = file_url.split(f"{AWS_S3_BUCKET}.s3.{AWS_S3_REGION}.amazonaws.com/")[1]
+        s3_client.delete_object(Bucket=AWS_S3_BUCKET, Key=key)
+    except IndexError:
+        print(f"[S3] URL mal formateada, no se pudo extraer el key: {file_url}")
+    except Exception as e:
+        print(f"[S3] Error al eliminar archivo: {e}")
