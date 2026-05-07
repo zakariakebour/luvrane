@@ -6,6 +6,8 @@ from decimal import Decimal
 class ProductImageBase(BaseModel):
     image_url: HttpUrl
     position: int = 0
+    # Tipo de media: image o video
+    media_type: str = "image"
 
 class ProductImageCreate(ProductImageBase):
     pass
@@ -13,28 +15,74 @@ class ProductImageCreate(ProductImageBase):
 class ProductImageResponse(ProductImageBase):
     id: str
 
-    media_type: str 
     class Config:
         from_attributes = True
 
+class VariantMediaBase(BaseModel):
+    media_url: HttpUrl
+    position: int = 0
+    # Tipo de media: image o video
+    media_type: str = "image"
 
-class VariantValueBase(BaseModel):
-    option_value_id: str
-
-class VariantValueCreate(VariantValueBase):
+class VariantMediaCreate(VariantMediaBase):
     pass
 
-class VariantValueResponse(VariantValueBase):
+class VariantMediaResponse(VariantMediaBase):
+    id: str
+    variant_id: str
+
+    class Config:
+        from_attributes = True
+
+class ColorBase(BaseModel):
+    name: str
+    hex_code: str
+
+    @field_validator("hex_code")
+    @classmethod
+    def validate_hex_code(cls, value):
+        value = value.strip()
+        if not value.startswith("#") or len(value) != 7:
+            raise ValueError("Le code hex doit être au format #RRGGBB")
+        return value
+
+class ColorCreate(ColorBase):
+    pass
+
+class ColorResponse(ColorBase):
     id: str
 
     class Config:
         from_attributes = True
 
+class SizeBase(BaseModel):
+    name: str
+    sort_order: int = 0
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, value):
+        value = value.strip()
+        if len(value) < 1:
+            raise ValueError("Le nom de la taille ne peut pas être vide")
+        return value
+
+class SizeCreate(SizeBase):
+    pass
+
+class SizeResponse(SizeBase):
+    id: str
+
+    class Config:
+        from_attributes = True
 
 class ProductVariantBase(BaseModel):
     stock: int = 0
     price: Optional[Decimal] = None
     sku: str
+    # Relacion con color y talla
+    color_id: Optional[str] = None
+    size_id: Optional[str] = None
 
     @field_validator("stock")
     @classmethod
@@ -59,23 +107,26 @@ class ProductVariantBase(BaseModel):
         return value
 
 class ProductVariantCreate(ProductVariantBase):
-    option_value_ids: List[str] = []
-    attributes: dict = {}
+    pass
 
 class ProductVariantResponse(ProductVariantBase):
     id: str
-    signature: str
     is_active: bool
-    values: List[VariantValueResponse] = []
+    # Relacion con color y talla
+    color: Optional[ColorResponse] = None
+    size: Optional[SizeResponse] = None
+    # Media de la variante
+    images: List[VariantMediaResponse] = []
 
     class Config:
         from_attributes = True
-
 
 class ProductBase(BaseModel):
     name: str = Field(..., min_length=2, max_length=255)
     description: Optional[str] = None
     price: Decimal = Field(..., gt=0)
+    # Categoria de genero del producto
+    gender_category: str
 
     @field_validator("name")
     @classmethod
@@ -94,15 +145,27 @@ class ProductBase(BaseModel):
             raise ValueError("Le prix doit être supérieur à 0")
         return value
 
+    @field_validator("gender_category")
+    @classmethod
+    def validate_gender_category(cls, value):
+        allowed = ["men", "women", "kids", "unisex"]
+        if value not in allowed:
+            raise ValueError(f"Catégorie invalide. Valeurs acceptées: {allowed}")
+        return value
+
 class ProductCreate(ProductBase):
     store_id: str
+    # Media del producto principal
     images: Optional[List[ProductImageCreate]] = []
+    # Variantes del producto
     variants: Optional[List[ProductVariantCreate]] = []
 
 class ProductUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     price: Optional[Decimal] = None
+    # Categoria de genero del producto
+    gender_category: Optional[str] = None
 
     @field_validator("name")
     @classmethod
@@ -122,75 +185,45 @@ class ProductUpdate(BaseModel):
             raise ValueError("Le prix doit être supérieur à 0")
         return value
 
+    @field_validator("gender_category")
+    @classmethod
+    def validate_gender_category(cls, value):
+        if value is not None:
+            allowed = ["men", "women", "kids", "unisex"]
+            if value not in allowed:
+                raise ValueError(f"Catégorie invalide. Valeurs acceptées: {allowed}")
+        return value
+
 class ProductResponse(ProductBase):
     id: str
     store_id: str
+    # Media del producto principal
     images: List[ProductImageResponse] = []
+    # Variantes del producto
     variants: List[ProductVariantResponse] = []
     is_active: bool
     status: str
     created_at: Optional[str] = None
+
     class Config:
         from_attributes = True
 
-
-class UpdatePosition(BaseModel):
-    position: int = Field(..., ge=0)
-
-class PresignedUrlRequest(BaseModel):
-    content_type: str
-    folder: str
-
-class PresignedUrlResponse(BaseModel):
-    presigned_url: str
-    public_url: str
-    media_type: str
-
+# Schema de paginacion de productos
 class ProductsPageResponse(BaseModel):
     total: int
     products: List[ProductResponse]
 
-class ProductOptionCreate(BaseModel):
-    name: str
+# Schema para actualizar posicion en carrusel
+class UpdatePosition(BaseModel):
+    position: int = Field(..., ge=0)
 
-    @field_validator("name")
-    @classmethod
-    def validate_name(cls, value):
-        value = value.strip()
-        if len(value) < 2:
-            raise ValueError("Le nom de l'option doit contenir au moins 2 caractères")
-        return value
+# Schema para solicitar URL firmada
+class PresignedUrlRequest(BaseModel):
+    content_type: str
+    folder: str
 
-class ProductOptionResponse(BaseModel):
-    id: str
-    product_id: str
-    name: str
-    values: List["ProductOptionValueResponse"] = []
-
-    class Config:
-        from_attributes = True
-
-#Opciones del producto
-class ProductOptionValueCreate(BaseModel):
-    value: str
-
-    @field_validator("value")
-    @classmethod
-    def validate_value(cls, value):
-        value = value.strip()
-        if len(value) < 1:
-            raise ValueError("La valeur ne peut pas être vide")
-        return value
-
-class ProductOptionValueResponse(BaseModel):
-    id: str
-    option_id: str
-    value: str
-
-    class Config:
-        from_attributes = True
-
-
-class UpdateStock(BaseModel):
-    stock: int
-
+# Schema de respuesta de URL firmada
+class PresignedUrlResponse(BaseModel):
+    presigned_url: str
+    public_url: str
+    media_type: str
