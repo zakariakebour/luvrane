@@ -1,11 +1,23 @@
 from sqlalchemy import Column, String, Text, Boolean, DateTime
+from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import relationship, foreign
 from core.database import Base
 import uuid
 from datetime import datetime, timezone
 from moduls.products.modules import Product
 from moduls.users.modules import User
+import enum
 
+# Categorias disponibles para la tienda
+class StoreCategory(enum.Enum):
+    ropa_mujer = "ropa_mujer"
+    ropa_hombre = "ropa_hombre"
+    accesorios = "accesorios"
+    zapatos = "zapatos"
+    ropa_deportiva = "ropa_deportiva"
+    bolsos = "bolsos"
+    cosmetica = "cosmetica"
+    handmade_accesorios = "handmade_accesorios"
 
 class Store(Base):
     __tablename__ = "stores"
@@ -15,7 +27,6 @@ class Store(Base):
 
     #Relacion con el usuario propietario de la tienda
     owner_id = Column(String(36), nullable=False, index=True)
-
     owner = relationship(
         "User",
         primaryjoin=foreign(owner_id) == User.id,
@@ -27,14 +38,24 @@ class Store(Base):
 
     #Descripcion de la tienda
     description = Column(Text, nullable=True)
-    
+
     #Tipo de tienda, no puede ser nulo
     type = Column(String(100), nullable=False)
-    
+
+    #Categoria de la tienda
+    category = Column(
+        SQLEnum(
+            StoreCategory,
+            native_enum=False,
+            length=30
+        ),
+        nullable=True
+    )
+
     #foto de perfil de la tienda
     photo_profile = Column(String(255), nullable=True)
 
-    #Foto rectangular extra de la tienda 
+    #Foto rectangular extra de la tienda
     image = Column(String(255), nullable=True)
 
     #Relacion con la tabla productos
