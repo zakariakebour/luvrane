@@ -53,52 +53,11 @@ def update_stock(
     return update_variant_stock_service(db, variant_id, stock_data.stock)
 
 
-#Servicios para opciones de productos
-@router.post("/{product_id}/options", response_model=ProductOptionResponse, status_code=201)
-def create_option(
-    product_id: str,
-    option_data: ProductOptionCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    return create_product_option_service(db, product_id, option_data.name)
 
-@router.get("/{product_id}/options", response_model=List[ProductOptionResponse])
-def get_options(
-    product_id: str,
-    db: Session = Depends(get_db)
-):
-    return get_options_by_product_service(db, product_id)
 
-@router.delete("/options/{option_id}", status_code=204)
-def delete_option(
-    option_id: str,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    delete_option_service(db, option_id)
 
-#Endpoints de opciones
-@router.post("/options/{option_id}/values", response_model=ProductOptionValueResponse, status_code=201)
-def create_option_value(
-    option_id: str,
-    value_data: ProductOptionValueCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    return create_option_value_service(db, option_id, value_data.value)
 
-@router.get("/options/{option_id}/values", response_model=List[ProductOptionValueResponse])
-def get_option_values(
-    option_id: str,
-    db: Session = Depends(get_db)
-):
-    return get_values_by_option_service(db, option_id)
 
-@router.delete("/options/values/{value_id}", status_code=204)
-def delete_option_value(
-    value_id: str,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    delete_option_value_service(db, value_id)
+
+
+
