@@ -77,14 +77,6 @@ class Product(Base):
         onupdate=lambda: datetime.now(timezone.utc)
     )
 
-    # Relación con imágenes
-    images = relationship(
-        "ProductImage",
-        primaryjoin="Product.id == foreign(ProductImage.product_id)",
-        back_populates="product",
-        viewonly=True
-    )
-
     # Relación con variantes
     variants = relationship(
         "ProductVariant",
@@ -93,12 +85,13 @@ class Product(Base):
         viewonly=True
     )
 
-    #Columna de fecha de creacion del producto
+    # Columna de fecha de creacion del producto
     created_at = Column(
         DateTime,
         default=lambda: datetime.now(timezone.utc)
     )
-    
+
+
 # Tabla variante de productos
 class ProductVariant(Base):
     __tablename__ = "product_variants"
@@ -151,6 +144,14 @@ class ProductVariant(Base):
         viewonly=True
     )
 
+    # Relación con imágenes/videos de variante
+    images = relationship(
+        "VariantMedia",
+        primaryjoin="ProductVariant.id == foreign(VariantMedia.variant_id)",
+        back_populates="variant",
+        viewonly=True
+    )
+
     # Columna para estado de la variante
     is_active = Column(Boolean, default=True)
 
@@ -165,13 +166,13 @@ class ProductVariant(Base):
     )
 
 
-# Tabla de imagenes de productos
-class ProductImage(Base):
-    __tablename__ = "product_images"
+# Tabla de imagenes/videos de variantes
+class VariantMedia(Base):
+    __tablename__ = "variant_media"
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
 
-    image_url = Column(String(255), nullable=False)
+    media_url = Column(String(255), nullable=False)
 
     # Tipo de media
     media_type = Column(String(255), default="image")
@@ -179,22 +180,24 @@ class ProductImage(Base):
     # Orden del carrusel
     position = Column(Integer, default=0)
 
-    product_id = Column(String(36), nullable=False, index=True)
+    # Columna relacion con variante
+    variant_id = Column(String(36), nullable=False, index=True)
 
-    # Relación con producto
-    product = relationship(
-        "Product",
-        primaryjoin="foreign(ProductImage.product_id) == Product.id",
+    # Relación con variante
+    variant = relationship(
+        "ProductVariant",
+        primaryjoin="foreign(VariantMedia.variant_id) == ProductVariant.id",
         back_populates="images",
         viewonly=True
     )
 
-    #Columna de fecha de creacion del producto
+    # Columna de fecha de creacion del media
     created_at = Column(
         DateTime,
         default=lambda: datetime.now(timezone.utc)
     )
-    
+
+
 # Tabla colores de variante de un producto
 class Color(Base):
     __tablename__ = "colors"
@@ -220,3 +223,8 @@ class Size(Base):
     name = Column(String(20), nullable=False, unique=True)
 
     sort_order = Column(Integer, default=0)
+
+    created_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc)
+    )
