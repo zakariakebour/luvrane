@@ -1,21 +1,13 @@
 from sqlalchemy.orm import Session
-from moduls.products.modules import ProductVariant, VariantValue
-from moduls.products.modules import ProductOption, ProductOptionValue
+from moduls.products.modules import ProductVariant, VariantMedia, Color, Size
 
-def add_product_variant(db: Session, product_id: str, variant_data: dict, option_value_ids: list[str]) -> ProductVariant:
+#Metodo para añdir variante
+def add_product_variant(db: Session, product_id: str, variant_data: dict) -> ProductVariant:
     variant = ProductVariant(
         **variant_data,
         product_id=product_id
     )
     db.add(variant)
-    db.flush()
-
-    for value_id in option_value_ids:
-        db.add(VariantValue(
-            variant_id=variant.id,
-            option_value_id=value_id
-        ))
-
     db.commit()
     db.refresh(variant)
     return variant
@@ -50,9 +42,6 @@ def delete_product_variant(db: Session, variant_id: str) -> None:
 def get_product_variant_by_id(db: Session, variant_id: str) -> ProductVariant:
     return db.query(ProductVariant).filter(ProductVariant.id == variant_id).first()
 
-def get_variant_by_signature(db: Session, signature: str) -> ProductVariant:
-    return db.query(ProductVariant).filter(ProductVariant.signature == signature).first()
-
 def get_variants_by_product(db: Session, product_id: str):
     return db.query(ProductVariant).filter(ProductVariant.product_id == product_id).all()
 
@@ -67,64 +56,67 @@ def update_product_variant(db: Session, variant_id: str, variant_data: dict) -> 
     db.refresh(variant)
     return variant
 
-#Metodos para Opciones y sus valores en las variantes de un producto
-def create_product_option(db: Session, product_id: str, name: str) -> ProductOption:
-    option = ProductOption(
-        product_id=product_id,
-        name=name.strip()
+#Metodo de creacion de variante
+def add_variant_media(db: Session, variant_id: str, media_data: dict) -> VariantMedia:
+    media = VariantMedia(
+        **media_data,
+        variant_id=variant_id
     )
-    db.add(option)
+    db.add(media)
     db.commit()
-    db.refresh(option)
-    return option
+    db.refresh(media)
+    return media
 
-def get_options_by_product(db: Session, product_id: str):
-    return db.query(ProductOption).filter(ProductOption.product_id == product_id).all()
+def get_media_by_variant(db: Session, variant_id: str):
+    return db.query(VariantMedia).filter(VariantMedia.variant_id == variant_id).all()
 
-def get_option_by_id(db: Session, option_id: str) -> ProductOption:
-    return db.query(ProductOption).filter(ProductOption.id == option_id).first()
+def get_media_by_id(db: Session, media_id: str) -> VariantMedia:
+    return db.query(VariantMedia).filter(VariantMedia.id == media_id).first()
 
-def delete_option(db: Session, option_id: str) -> None:
-    option = db.query(ProductOption).filter(ProductOption.id == option_id).first()
-    if option:
-        db.delete(option)
+def delete_variant_media(db: Session, media_id: str) -> None:
+    media = db.query(VariantMedia).filter(VariantMedia.id == media_id).first()
+    if media:
+        db.delete(media)
         db.commit()
 
-def create_option_value(db: Session, option_id: str, value: str) -> ProductOptionValue:
-    option_value = ProductOptionValue(
-        option_id=option_id,
-        value=value.strip()
-    )
-    db.add(option_value)
-    db.commit()
-    db.refresh(option_value)
-    return option_value
-
-def get_values_by_option(db: Session, option_id: str):
-    return db.query(ProductOptionValue).filter(ProductOptionValue.option_id == option_id).all()
-
-def get_option_value_by_id(db: Session, value_id: str) -> ProductOptionValue:
-    return db.query(ProductOptionValue).filter(ProductOptionValue.id == value_id).first()
-
-def delete_option_value(db: Session, value_id: str) -> None:
-    value = db.query(ProductOptionValue).filter(ProductOptionValue.id == value_id).first()
-    if value:
-        db.delete(value)
+def update_media_position(db: Session, media_id: str, position: int) -> VariantMedia:
+    media = db.query(VariantMedia).filter(VariantMedia.id == media_id).first()
+    if media:
+        media.position = position
         db.commit()
+        db.refresh(media)
+    return media
 
-def get_option_values_by_ids(db: Session, ids: list[str]):
-    return db.query(ProductOptionValue).filter(
-        ProductOptionValue.id.in_(ids)
-    ).all()
+def count_variant_media(db: Session, variant_id: str) -> int:
+    return db.query(VariantMedia).filter(VariantMedia.variant_id == variant_id).count()
 
+#Metodo de creacion de color
+def create_color(db: Session, color_data: dict) -> Color:
+    color = Color(**color_data)
+    db.add(color)
+    db.commit()
+    db.refresh(color)
+    return color
 
-def get_option_by_id(db: Session, option_id: str):
-    return db.query(ProductOption).filter(
-        ProductOption.id == option_id
-    ).first()
+def get_all_colors(db: Session):
+    return db.query(Color).all()
 
+def get_color_by_id(db: Session, color_id: str) -> Color:
+    return db.query(Color).filter(Color.id == color_id).first()
 
-def get_options_by_product(db: Session, product_id: str):
-    return db.query(ProductOption).filter(
-        ProductOption.product_id == product_id
-    ).all()
+def delete_color(db: Session, color_id: str) -> None:
+    color = db.query(Color).filter(Color.id == color_id).first()
+    if color:
+        db.delete(color)
+        db.commit()
+        
+#Metodo de creacion de talla
+def create_size(db: Session, size_data: dict) -> Size:
+    size = Size(**size_data)
+    db.add(size)
+    db.commit()
+    db.refresh(size)
+    return size
+
+def get_all_sizes(db: Session):
+    return db.query(Size).order_by(Size.sort_order).all(
