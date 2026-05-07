@@ -2,6 +2,8 @@ from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List
 from datetime import datetime
 from moduls.products.schemas import ProductResponse
+# Importamos el Enum para asegurar compatibilidad con el modelo de SQLAlchemy
+from moduls.stores.modules import StoreCategory 
 
 #Clase completa para validacion de entrada y salida de los datos para la creacion de la tienda
 class CreateStore(BaseModel):
@@ -10,6 +12,7 @@ class CreateStore(BaseModel):
     photo_profile: Optional[str] = None
     image: Optional[str] = None
     type: str = Field(...,min_length=2,max_length=100)
+    category: Optional[StoreCategory] = None
 
     # Validation validacion para el nombre
     @field_validator("name")
@@ -37,6 +40,7 @@ class StoreResponse(BaseModel):
     description: Optional[str]
     photo_profile: Optional[str]
     image: Optional[str]
+    category: Optional[StoreCategory] = None
     products: List[ProductResponse] = Field(default_factory=list)
     type: str
     is_active: bool
@@ -57,6 +61,7 @@ class UpdateStore(BaseModel):
     photo_profile: Optional[str] = None
     image: Optional[str] = None
     type: Optional[str] = Field(None, min_length=2, max_length=100)  
+    category: Optional[StoreCategory] = None
 
     @field_validator("name")
     @classmethod
@@ -91,4 +96,4 @@ class StoreImagePresignedResponse(BaseModel):
     presigned_url: str
     public_url: str
     image_type: str
-    media_type: str        
+    media_type: str
