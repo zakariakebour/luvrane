@@ -93,7 +93,12 @@ class Product(Base):
         viewonly=True
     )
 
-
+    #Columna de fecha de creacion del producto
+    created_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc)
+    )
+    
 # Tabla variante de productos
 class ProductVariant(Base):
     __tablename__ = "product_variants"
@@ -184,7 +189,12 @@ class ProductImage(Base):
         viewonly=True
     )
 
-
+    #Columna de fecha de creacion del producto
+    created_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc)
+    )
+    
 # Tabla colores de variante de un producto
 class Color(Base):
     __tablename__ = "colors"
