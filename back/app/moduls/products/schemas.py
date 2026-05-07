@@ -1,10 +1,10 @@
 from pydantic import BaseModel, Field, HttpUrl, field_validator
 from typing import Optional, List
 from decimal import Decimal
-
+from datetime import datetime
 
 class ProductImageBase(BaseModel):
-    image_url: HttpUrl
+    image_url: str
     position: int = 0
     # Tipo de media: image o video
     media_type: str = "image"
@@ -19,7 +19,7 @@ class ProductImageResponse(ProductImageBase):
         from_attributes = True
 
 class VariantMediaBase(BaseModel):
-    media_url: HttpUrl
+    media_url: str
     position: int = 0
     # Tipo de media: image o video
     media_type: str = "image"
@@ -30,7 +30,7 @@ class VariantMediaCreate(VariantMediaBase):
 class VariantMediaResponse(VariantMediaBase):
     id: str
     variant_id: str
-
+    media_type : str
     class Config:
         from_attributes = True
 
@@ -203,7 +203,7 @@ class ProductResponse(ProductBase):
     variants: List[ProductVariantResponse] = []
     is_active: bool
     status: str
-    created_at: Optional[str] = None
+    created_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True

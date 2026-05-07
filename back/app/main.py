@@ -64,5 +64,14 @@ app.include_router(order_router,prefix="/api/v1/orders")
 def health():
     return {"status": "ok"}
 
-#Punto de entrada para AWS Lambda
-handler = Mangum(app)
+# Adaptador de Mangum interno
+asgi_handler = Mangum(app, lifespan="off")
+
+# Nuevo punto de entrada principal
+def lambda_handler(event, context):
+    # Si el evento NO tiene 'requestContext', es el luvrane-warmup de cada 5 min
+    if 'requestContext' not in event:
+        return {"statusCode": 200, "body": "Evento"}
+    
+    # Si es una petición real de un usuario, usamos Mangum
+    return asgi_handler(event, context)

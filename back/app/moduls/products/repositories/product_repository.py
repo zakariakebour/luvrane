@@ -8,7 +8,8 @@ from datetime import datetime, timezone
 from moduls.products.modules import ProductStatus
 #Importamos Joinedload para cargar relaciones
 from sqlalchemy.orm import joinedload
-
+#Importamos la clase de atributos
+from moduls.products.modules import ProductVariant
 
 #Creamos el metodo que se encarga de insertar los datos del producto creado
 def create_product(db: Session, product_data: dict) -> Product:
@@ -23,9 +24,9 @@ def create_product(db: Session, product_data: dict) -> Product:
 def get_products(db: Session, skip: int = 0, limit: int = 20, gender_category=None) -> dict:
     query = db.query(Product).options(
         joinedload(Product.images),
-        joinedload(Product.variants).joinedload("color"),
-        joinedload(Product.variants).joinedload("size"),
-        joinedload(Product.variants).joinedload("images"),
+        joinedload(Product.variants).joinedload(ProductVariant.color),
+        joinedload(Product.variants).joinedload(ProductVariant.size),
+        joinedload(Product.variants).joinedload(ProductVariant.images),
         joinedload(Product.store)
     ).filter(
         Product.is_active == True
@@ -44,9 +45,9 @@ def get_products(db: Session, skip: int = 0, limit: int = 20, gender_category=No
 def get_product_by_id(db: Session, product_id: str) -> Product:
     return db.query(Product).options(
         joinedload(Product.images),
-        joinedload(Product.variants).joinedload("color"),
-        joinedload(Product.variants).joinedload("size"),
-        joinedload(Product.variants).joinedload("images")
+        joinedload(Product.variants).joinedload(ProductVariant.color),
+        joinedload(Product.variants).joinedload(ProductVariant.size),
+        joinedload(Product.variants).joinedload(ProductVariant.images)
     ).filter(Product.id == product_id).first()
 
 
@@ -55,9 +56,9 @@ def get_product_by_name(db: Session, product_name: str):
     #ilike = insensible a mayusculas + % permite busqueda parcial
     return db.query(Product).options(
         joinedload(Product.images),
-        joinedload(Product.variants).joinedload("color"),
-        joinedload(Product.variants).joinedload("size"),
-        joinedload(Product.variants).joinedload("images")
+        joinedload(Product.variants).joinedload(ProductVariant.color),
+        joinedload(Product.variants).joinedload(ProductVariant.size),
+        joinedload(Product.variants).joinedload(ProductVariant.images)
     ).filter(
         Product.name.ilike(f"%{product_name}%"),
         Product.is_active == True
@@ -69,9 +70,9 @@ def get_product_by_name(db: Session, product_name: str):
 def get_products_by_store(db: Session, store_id: str, skip: int = 0, limit: int = 20, gender_category=None) -> dict:
     query = db.query(Product).options(
         joinedload(Product.images),
-        joinedload(Product.variants).joinedload("color"),
-        joinedload(Product.variants).joinedload("size"),
-        joinedload(Product.variants).joinedload("images"),
+        joinedload(Product.variants).joinedload(ProductVariant.color),
+        joinedload(Product.variants).joinedload(ProductVariant.size),
+        joinedload(Product.variants).joinedload(ProductVariant.images),
         joinedload(Product.store)
     ).filter(
         Product.store_id == store_id,
@@ -127,19 +128,21 @@ def update_product_status(db: Session, product: Product, status: ProductStatus) 
     db.refresh(product)
     return product
 
-
-#Metodo para listar productos de una tienda concreta con paginacion
-def get_products_by_store(db: Session, store_id: str, skip: int = 0, limit: int = 20) -> dict:
-    query = db.query(Product).options(
-        joinedload(Product.images),
-        joinedload(Product.variants).joinedload("color"),
-        joinedload(Product.variants).joinedload("size"),
-        joinedload(Product.variants).joinedload("images"),
-        joinedload(Product.store)
-    ).filter(
-        Product.store_id == store_id,
-        Product.is_active == True
+#Metodo para selccionar producto por nombrey tienda
+def get_product_by_name_and_store(db: Session, name: str, store_id: str):
+    return (
+        db.query(Product)
+        .options(
+            joinedload(Product.images),
+            joinedload(Product.variants).joinedload(ProductVariant.color),
+            joinedload(Product.variants).joinedload(ProductVariant.size),
+            joinedload(Product.variants).joinedload(ProductVariant.images),
+            joinedload(Product.store)
+        )
+        .filter(
+            Product.name == name,
+            Product.store_id == store_id,
+            Product.is_active == True
+        )
+        .first()
     )
-    total = query.count()
-    products = query.offset(skip).limit(limit).all()
-    return {"total": total, "products": products}

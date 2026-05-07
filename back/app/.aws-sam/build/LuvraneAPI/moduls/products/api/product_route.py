@@ -1,8 +1,14 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
+
 #Importamos schemas
-from moduls.products.schemas import ProductCreate, ProductResponse, ProductUpdate, ProductsPageResponse
+from moduls.products.schemas import (
+    ProductCreate,
+    ProductResponse,
+    ProductUpdate,
+    ProductsPageResponse
+)
 #Importamos servicios
 from moduls.products.services.product_service import (
     create_product_service,
@@ -21,11 +27,11 @@ from core.database import get_db
 from core.dependencies import get_current_user
 #Importamos modulo de usuario
 from moduls.users.modules import User
-#Importamos ProductStatus
-from moduls.products.modules import ProductStatus
-#Importamos schema de paginacion
-from pydantic import BaseModel
+#Importamos ProductStatus y GenderCategory
+from moduls.products.modules import ProductStatus, GenderCategory
+
 router = APIRouter(tags=["Products"])
+
 
 #Endpoint para crear producto — protegido solo owners
 @router.post("/", response_model=ProductResponse, status_code=201)
@@ -36,24 +42,31 @@ def create_product(
 ):
     return create_product_service(db, product_data, current_user.id)
 
-# Endpoint para listar productos de una tienda concreta — publico
+
+#Endpoint para listar productos de una tienda concreta — publico
 @router.get("/store/{store_id}", response_model=ProductsPageResponse)
 def get_products_by_store(
     store_id: str,
     skip: int = 0,
     limit: int = 20,
+    #Filtro opcional por categoria de genero
+    gender_category: Optional[GenderCategory] = Query(None),
     db: Session = Depends(get_db)
 ):
-    return get_products_by_store_service(db, store_id, skip=skip, limit=limit)
+    return get_products_by_store_service(db, store_id, skip=skip, limit=limit, gender_category=gender_category)
 
-#Endpoint para listar productos con paginacion — publico
+
+#Endpoint para listar todos los productos con paginacion — publico
 @router.get("/", response_model=ProductsPageResponse)
 def get_products(
     skip: int = 0,
     limit: int = 20,
+    #Filtro opcional por categoria de genero
+    gender_category: Optional[GenderCategory] = Query(None),
     db: Session = Depends(get_db)
 ):
-    return get_products_service(db, skip=skip, limit=limit)
+    return get_products_service(db, skip=skip, limit=limit, gender_category=gender_category)
+
 
 #Endpoint para buscar producto por nombre — publico
 @router.get("/search", response_model=List[ProductResponse])
@@ -63,6 +76,7 @@ def get_product_by_name(
 ):
     return get_product_by_name_service(db, name)
 
+
 #Endpoint para consultar estado del producto — protegido
 @router.get("/{product_id}/status")
 def get_product_status(
@@ -71,6 +85,7 @@ def get_product_status(
     current_user: User = Depends(get_current_user)
 ):
     return get_product_status_service(db, product_id)
+
 
 #Endpoint para actualizar estado del producto — protegido solo owners
 @router.patch("/{product_id}/status")
@@ -82,6 +97,7 @@ def update_product_status(
 ):
     return update_product_status_service(db, product_id, status, current_user.id)
 
+
 #Endpoint para obtener producto por ID — publico
 @router.get("/{product_id}", response_model=ProductResponse)
 def get_product_by_id(
@@ -89,6 +105,7 @@ def get_product_by_id(
     db: Session = Depends(get_db)
 ):
     return get_product_by_id_service(db, product_id)
+
 
 #Endpoint para actualizar producto — protegido solo owners
 @router.put("/{product_id}", response_model=ProductResponse)
@@ -99,6 +116,7 @@ def update_product(
     current_user: User = Depends(get_current_user)
 ):
     return update_product_service(db, product_data, product_id, current_user.id)
+
 
 #Endpoint para desactivar producto — protegido solo owners
 @router.delete("/{product_id}", response_model=ProductResponse)

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from typing import List
+
 #Importamos schemas
 from moduls.products.schemas import (
     ProductImageCreate,
@@ -16,7 +17,7 @@ from moduls.products.services.product_images import (
     delete_product_image_service
 )
 #Importamos S3
-from core.s3 import generate_presigned_url, delete_file
+from core.s3 import generate_presigned_url
 #Importamos base de datos
 from core.database import get_db
 #Importamos dependencia para obtener usuario autenticado
@@ -45,7 +46,7 @@ def add_image(
 ):
     return add_product_image_service(db, product_id, image_data, current_user.id)
 
-#Endpoint para reordenar imagen en el carrusel — protegido
+#Endpoint para reordenar imagen o video en el carrusel — protegido
 @router.patch("/{image_id}/position", response_model=ProductImageResponse)
 def update_position(
     image_id: str,
@@ -62,11 +63,5 @@ def delete_image(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    #Buscamos la imagen para obtener su URL antes de eliminarla
-    from moduls.products.repositories.product_images import get_image_by_id
-    image = get_image_by_id(db, image_id)
-    if image:
-        #Eliminamos de S3
-        delete_file(image.image_url)
-    #Eliminamos de la DB
+    #El servicio ya elimina de S3 y de la DB
     delete_product_image_service(db, image_id, current_user.id)

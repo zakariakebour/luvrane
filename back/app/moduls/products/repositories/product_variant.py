@@ -35,9 +35,14 @@ def update_variant(db: Session, variant_id: str, variant_data: dict) -> ProductV
 
 def delete_product_variant(db: Session, variant_id: str) -> None:
     variant = db.query(ProductVariant).filter(ProductVariant.id == variant_id).first()
-    if variant:
-        variant.is_active = False
+    
+    try:
+        db.delete(variant)
         db.commit()
+    except Exception as e:
+        db.rollback()
+        raise e
+
 
 def get_product_variant_by_id(db: Session, variant_id: str) -> ProductVariant:
     return db.query(ProductVariant).filter(ProductVariant.id == variant_id).first()
@@ -119,4 +124,14 @@ def create_size(db: Session, size_data: dict) -> Size:
     return size
 
 def get_all_sizes(db: Session):
-    return db.query(Size).order_by(Size.sort_order).all(
+    return db.query(Size).order_by(Size.sort_order).all()
+
+def get_size_by_id(db: Session, size_id: str) -> Size:
+    return db.query(Size).filter(Size.id == size_id).first()
+
+
+def delete_size(db: Session, size_id: str) -> None:
+    size = db.query(Size).filter(Size.id == size_id).first()
+    if size:
+        db.delete(size)
+        db.commit()

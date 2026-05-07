@@ -17,7 +17,6 @@ class StoreCategory(enum.Enum):
     ropa_deportiva = "ropa_deportiva"
     bolsos = "bolsos"
     cosmetica = "cosmetica"
-    handmade_accesorios = "handmade_accesorios"
 
 class Store(Base):
     __tablename__ = "stores"

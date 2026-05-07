@@ -43,107 +43,6 @@ class UpdateStock(BaseModel):
 router = APIRouter(tags=["ProductVariants"])
 
 
-# Endpoints de variante
-
-# Crear variante de producto — protegido
-@router.post("/{product_id}", response_model=ProductVariantResponse, status_code=201)
-def add_variant(
-    product_id: str,
-    variant_data: ProductVariantCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    data = variant_data.model_dump()
-    return add_product_variant_service(db, data, product_id)
-
-# Obtener todas las variantes de un producto — publico
-@router.get("/{product_id}", response_model=List[ProductVariantResponse])
-def get_variants(
-    product_id: str,
-    db: Session = Depends(get_db)
-):
-    return get_variants_by_product_service(db, product_id)
-
-# Obtener variante por id — publico
-@router.get("/detail/{variant_id}", response_model=ProductVariantResponse)
-def get_variant(
-    variant_id: str,
-    db: Session = Depends(get_db)
-):
-    return get_variant_by_id_service(db, variant_id)
-
-# Actualizar stock de variante — protegido
-@router.patch("/{variant_id}/stock", response_model=ProductVariantResponse)
-def update_stock(
-    variant_id: str,
-    stock_data: UpdateStock,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    return update_variant_stock_service(db, variant_id, stock_data.stock)
-
-# Actualizar datos de variante — protegido
-@router.patch("/{variant_id}", response_model=ProductVariantResponse)
-def update_variant(
-    variant_id: str,
-    variant_data: ProductVariantCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    data = variant_data.model_dump(exclude_none=True)
-    return update_variant_service(db, variant_id, data)
-
-# Desactivar variante — protegido
-@router.delete("/{variant_id}", status_code=204)
-def delete_variant(
-    variant_id: str,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    delete_variant_service(db, variant_id)
-
-
-#Endpoints de media de variante
-
-# Añadir media a variante — protegido
-@router.post("/{variant_id}/media", response_model=VariantMediaResponse, status_code=201)
-def add_media(
-    variant_id: str,
-    media_data: VariantMediaCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    data = media_data.model_dump()
-    return add_variant_media_service(db, variant_id, data, current_user.id)
-
-# Obtener media de variante — publico
-@router.get("/{variant_id}/media", response_model=List[VariantMediaResponse])
-def get_media(
-    variant_id: str,
-    db: Session = Depends(get_db)
-):
-    return get_media_by_variant_service(db, variant_id)
-
-# Actualizar posicion de media en carrusel — protegido
-@router.patch("/media/{media_id}/position", response_model=VariantMediaResponse)
-def update_position(
-    media_id: str,
-    position_data: UpdatePosition,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    return update_media_position_service(db, media_id, position_data.position)
-
-# Eliminar media de variante — protegido
-@router.delete("/media/{media_id}", status_code=204)
-def delete_media(
-    media_id: str,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    delete_variant_media_service(db, media_id, current_user.id)
-
-
 #Endpoints de colo
 
 # Crear color — protegido
@@ -198,3 +97,105 @@ def delete_size(
     current_user: User = Depends(get_current_user)
 ):
     delete_size_service(db, size_id)
+
+
+# Endpoints de variante
+
+# Obtener todas las variantes de un producto — publico
+# IMPORTANTE: Esta ruta va antes que las de ID para evitar conflictos
+@router.get("/{product_id}/all", response_model=List[ProductVariantResponse])
+def get_variants(
+    product_id: str,
+    db: Session = Depends(get_db)
+):
+    return get_variants_by_product_service(db, product_id)
+
+# Actualizar stock de variante — protegido
+@router.patch("/{variant_id}/stock", response_model=ProductVariantResponse)
+def update_stock(
+    variant_id: str,
+    stock_data: UpdateStock,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return update_variant_stock_service(db, variant_id, stock_data.stock)
+
+# Obtener media de variante — publico
+@router.get("/{variant_id}/media", response_model=List[VariantMediaResponse])
+def get_media(
+    variant_id: str,
+    db: Session = Depends(get_db)
+):
+    return get_media_by_variant_service(db, variant_id)
+
+# Añadir media a variante — protegido
+@router.post("/{variant_id}/media", response_model=VariantMediaResponse, status_code=201)
+def add_media(
+    variant_id: str,
+    media_data: VariantMediaCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    data = media_data.model_dump()
+    return add_variant_media_service(db, variant_id, data, current_user.id)
+
+# Crear variante de producto — protegido
+@router.post("/{product_id}", response_model=ProductVariantResponse, status_code=201)
+def add_variant(
+    product_id: str,
+    variant_data: ProductVariantCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    data = variant_data.model_dump()
+    return add_product_variant_service(db, data, product_id)
+
+# Obtener variante por id — publico
+@router.get("/detail/{variant_id}", response_model=ProductVariantResponse)
+def get_variant(
+    variant_id: str,
+    db: Session = Depends(get_db)
+):
+    return get_variant_by_id_service(db, variant_id)
+
+# Actualizar datos de variante — protegido
+@router.put("/{variant_id}", response_model=ProductVariantResponse)
+def update_variant(
+    variant_id: str,
+    variant_data: ProductVariantCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    data = variant_data.model_dump(exclude_none=True)
+    return update_variant_service(db, variant_id, data)
+
+# Desactivar variante — protegido
+@router.delete("/{variant_id}", status_code=204)
+def delete_variant(
+    variant_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    delete_variant_service(db, variant_id)
+
+
+#Endpoints de media de variante (específicos)
+
+# Actualizar posicion de media en carrusel — protegido
+@router.patch("/media/{media_id}/position", response_model=VariantMediaResponse)
+def update_position(
+    media_id: str,
+    position_data: UpdatePosition,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return update_media_position_service(db, media_id, position_data.position)
+
+# Eliminar media de variante — protegido
+@router.delete("/media/{media_id}", status_code=204)
+def delete_media(
+    media_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    delete_variant_media_service(db, media_id, current_user.id)

@@ -4,118 +4,199 @@ from sqlalchemy.exc import IntegrityError
 from moduls.products.repositories.product_variant import (
     add_product_variant,
     get_product_variant_by_id,
-    get_variant_by_signature,
     get_variants_by_product,
     update_variant_stock,
-    create_product_option,
-    get_options_by_product,
-    get_option_by_id,
-    delete_option,
-    create_option_value,
-    get_values_by_option,
-    get_option_value_by_id,
-    delete_option_value,
-    get_option_values_by_ids
+    update_product_variant,
+    delete_product_variant,
+    add_variant_media,
+    get_media_by_variant,
+    get_media_by_id,
+    delete_variant_media,
+    update_media_position,
+    count_variant_media,
+    get_color_by_id,
+    get_size_by_id,
+    create_color,
+    get_all_colors,
+    delete_color,
+    create_size,
+    get_all_sizes,
+    delete_size
 )
 from moduls.products.repositories.product_repository import get_product_by_id
 from core.exceptions import NotFoundException, ConflictException, ValidationException
+from core.s3 import delete_file
 
-def build_signature(attributes: dict) -> str:
-    return "|".join(f"{k}={v}" for k, v in sorted(attributes.items()))
+# Limite maximo de media por variante
+MAX_MEDIA = 10
 
-
-def add_product_variant_service(db: Session, variant_data: dict, option_value_ids: list, attributes: dict, product_id: str):
+def add_product_variant_service(db: Session, variant_data: dict, product_id: str):
+    # Comprobamos si existe el producto
     product = get_product_by_id(db, product_id)
     if not product:
         raise NotFoundException("Produit introuvable")
 
-    signature = build_signature(attributes)
-    variant_data["signature"] = signature
+    # Validamos color si se envia
+    if variant_data.get("color_id"):
+        color = get_color_by_id(db, variant_data["color_id"])
+        if not color:
+            raise NotFoundException("Couleur introuvable")
 
+    # Validamos talla si se envia
+    if variant_data.get("size_id"):
+        size = get_size_by_id(db, variant_data["size_id"])
+        if not size:
+            raise NotFoundException("Taille introuvable")
+
+    # Creamos la variante y manejamos duplicados
     try:
-        variant = add_product_variant(db, product_id, variant_data, option_value_ids)
+        variant = add_product_variant(db, product_id, variant_data)
     except IntegrityError:
         db.rollback()
-        raise ConflictException("Cette combinaison de variante existe déjà")
+        raise ConflictException("Cette combinaison couleur/taille existe déjà pour ce produit")
 
     return variant
 
-
 def get_variants_by_product_service(db: Session, product_id: str):
+    # Comprobamos si existe el producto
     product = get_product_by_id(db, product_id)
     if not product:
         raise NotFoundException("Produit introuvable")
     return get_variants_by_product(db, product_id)
 
-
-def update_variant_stock_service(db: Session, variant_id: str, stock: int):
+def get_variant_by_id_service(db: Session, variant_id: str):
+    # Comprobamos si existe la variante
     variant = get_product_variant_by_id(db, variant_id)
     if not variant:
         raise NotFoundException("Variante introuvable")
+    return variant
+
+def update_variant_stock_service(db: Session, variant_id: str, stock: int):
+    # Comprobamos si existe la variante
+    variant = get_product_variant_by_id(db, variant_id)
+    if not variant:
+        raise NotFoundException("Variante introuvable")
+    # Validamos el numero de stock
     if stock < 0:
         raise ValidationException("Stock invalide")
     return update_variant_stock(db, variant_id, stock)
 
-#Metodos para opcion y su valor de un atributo
-def create_product_option_service(db: Session, product_id: str, name: str):
-    product = get_product_by_id(db, product_id)
-    if not product:
-        raise NotFoundException("Produit introuvable")
-    return create_product_option(db, product_id, name)
 
-def get_options_by_product_service(db: Session, product_id: str):
-    product = get_product_by_id(db, product_id)
-    if not product:
-        raise NotFoundException("Produit introuvable")
-    return get_options_by_product(db, product_id)
+def update_variant_service(db: Session, variant_id: str, variant_data: dict):
+    # Comprobamos si existe la variante
+    variant = get_product_variant_by_id(db, variant_id)
+    if not variant:
+        raise NotFoundException("Variante introuvable")
 
-def delete_option_service(db: Session, option_id: str):
-    option = get_option_by_id(db, option_id)
-    if not option:
-        raise NotFoundException("Option introuvable")
-    delete_option(db, option_id)
+    # Validamos color si se envia
+    if variant_data.get("color_id"):
+        color = get_color_by_id(db, variant_data["color_id"])
+        if not color:
+            raise NotFoundException("Couleur introuvable")
 
-def create_option_value_service(db: Session, option_id: str, value: str):
-    option = get_option_by_id(db, option_id)
-    if not option:
-        raise NotFoundException("Option introuvable")
-    return create_option_value(db, option_id, value)
+    # Validamos talla si se envia
+    if variant_data.get("size_id"):
+        size = get_size_by_id(db, variant_data["size_id"])
+        if not size:
+            raise NotFoundException("Taille introuvable")
 
-def get_values_by_option_service(db: Session, option_id: str):
-    option = get_option_by_id(db, option_id)
-    if not option:
-        raise NotFoundException("Option introuvable")
-    return get_values_by_option(db, option_id)
+    try:
+        return update_product_variant(db, variant_id, variant_data)
+    except IntegrityError:
+        db.rollback()
+        raise ConflictException("Cette combinaison couleur/taille existe déjà pour ce produit")
 
-def delete_option_value_service(db: Session, value_id: str):
-    value = get_option_value_by_id(db, value_id)
-    if not value:
-        raise NotFoundException("Valeur introuvable")
-    delete_option_value(db, value_id)
+def delete_variant_service(db: Session, variant_id: str):
+    # Comprobamos si existe la variante
+    variant = get_product_variant_by_id(db, variant_id)
+    if not variant:
+        raise NotFoundException("Variante introuvable")
+    delete_product_variant(db, variant_id)
 
-def validate_variant_structure(db: Session, product_id: str, option_value_ids: list[str]):
+def add_variant_media_service(db: Session, variant_id: str, media_data: dict, current_user_id: str):
+    # Comprobamos si existe la variante
+    variant = get_product_variant_by_id(db, variant_id)
+    if not variant:
+        raise NotFoundException("Variante introuvable")
 
-    values = get_option_values_by_ids(db, option_value_ids)
+    # Comprobamos el limite de media
+    total = count_variant_media(db, variant_id)
+    if total >= MAX_MEDIA:
+        raise ValidationException(f"Maximum {MAX_MEDIA} médias par variante")
 
-    if len(values) != len(option_value_ids):
-        raise ValidationException("Option values invalides")
+    # Convertimos la URL a string
+    media_data["media_url"] = str(media_data["media_url"])
 
-    option_map = {}
+    return add_variant_media(db, variant_id, media_data)
 
-    for v in values:
-        option = get_option_by_id(db, v.option_id)
 
-        if option.product_id != product_id:
-            raise ValidationException("Option ne appartient pas au produit")
+def get_media_by_variant_service(db: Session, variant_id: str):
+    # Comprobamos si existe la variante
+    variant = get_product_variant_by_id(db, variant_id)
+    if not variant:
+        raise NotFoundException("Variante introuvable")
+    return get_media_by_variant(db, variant_id)
 
-        if v.option_id in option_map:
-            raise ValidationException("Une variante ne peut pas avoir plusieurs valeurs pour la même option")
+#Metodo para eliminar media de la variante
+def delete_variant_media_service(db: Session, media_id: str, current_user_id: str):
+    # Comprobamos si existe el media
+    media = get_media_by_id(db, media_id)
+    if not media:
+        raise NotFoundException("Média introuvable")
 
-        option_map[v.option_id] = v.id
+    # Eliminamos el archivo del bucket S3
+    delete_file(media.media_url)
 
-    product_options = get_options_by_product(db, product_id)
+    # Eliminamos de la DB
+    delete_variant_media(db, media_id)
 
-    if len(option_map) != len(product_options):
-        raise ValidationException("La variante doit contenir toutes les options du produit")
+#Metodo para actualizar posicion
+def update_media_position_service(db: Session, media_id: str, position: int):
+    # Comprobamos si existe el media
+    media = get_media_by_id(db, media_id)
+    if not media:
+        raise NotFoundException("Média introuvable")
+    # Validamos la posicion
+    if position < 0:
+        raise ValidationException("La position doit être positive")
+    return update_media_position(db, media_id, position)
 
-    return values
+#Metodo para creacion de colores de variante
+def create_color_service(db: Session, color_data: dict):
+    try:
+        return create_color(db, color_data)
+    except IntegrityError:
+        db.rollback()
+        raise ConflictException("Cette couleur existe déjà")
+
+
+def get_all_colors_service(db: Session):
+    return get_all_colors(db)
+
+
+def delete_color_service(db: Session, color_id: str):
+    # Comprobamos si existe el color
+    color = get_color_by_id(db, color_id)
+    if not color:
+        raise NotFoundException("Couleur introuvable")
+    delete_color(db, color_id)
+
+#Metodo para crear talla
+def create_size_service(db: Session, size_data: dict):
+    try:
+        return create_size(db, size_data)
+    except IntegrityError:
+        db.rollback()
+        raise ConflictException("Cette taille existe déjà")
+
+
+def get_all_sizes_service(db: Session):
+    return get_all_sizes(db)
+
+
+def delete_size_service(db: Session, size_id: str):
+    # Comprobamos si existe la talla
+    size = get_size_by_id(db, size_id)
+    if not size:
+        raise NotFoundException("Taille introuvable")
+    delete_size(db, size_id)
