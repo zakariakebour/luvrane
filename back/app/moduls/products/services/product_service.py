@@ -68,10 +68,10 @@ def get_product_by_name_service(db, product_name: str):
     return products
 
 
-#Metodo para listar productos con paginacion
-def get_products_service(db, skip, limit):
-    #Devolvemos los productos con paginación
-    return get_products(db, skip=skip, limit=limit)
+#Metodo para listar productos con paginacion y filtro opcional de genero
+def get_products_service(db, skip, limit, gender_category=None):
+    #Devolvemos los productos con paginación y filtro
+    return get_products(db, skip=skip, limit=limit, gender_category=gender_category)
 
 
 #Metodo para actualizar un producto
@@ -147,10 +147,10 @@ def get_product_status_service(db, product_id: str):
 
 
 #Metodo para listar productos de una tienda concreta
-def get_products_by_store_service(db, store_id: str, skip: int = 0, limit: int = 20):
+def get_products_by_store_service(db, store_id: str, skip: int = 0, limit: int = 20, gender_category=None):
     store = select_store_by_id(db, store_id)
     if not store:
         raise NotFoundException("Boutique introuvable")
-
-    #Devolvemos productos activos de la tienda con paginacion
-    return get_products_by_store(db, store_id, skip=skip, limit=limit)
+        
+#Devolvemos productos activos de la tienda con paginacion y filtro
+    return get_products_by_store(db, store_id, skip=skip, limit=limit, gender_category=gender_category)
