@@ -6,12 +6,22 @@ import uuid
 from datetime import datetime, timezone
 import enum
 
+
 # Clase para controlar estado del producto
 class ProductStatus(enum.Enum):
     active = "active"
     pending = "pending"
     out_of_stock = "out_of_stock"
     discontinued = "discontinued"
+
+
+# Clase para controlar categorias de genero
+class GenderCategory(enum.Enum):
+    men = "men"
+    women = "women"
+    kids = "kids"
+    unisex = "unisex"
+
 
 # Tabla completa de productos
 class Product(Base):
@@ -39,7 +49,7 @@ class Product(Base):
     # Columna para fecha de eliminacion
     deleted_at = Column(DateTime, nullable=True)
 
-    # Columna relacion con estado del producto, formato soportado por Aurora DSQL 
+    # Columna relacion con estado del producto, formato soportado por Aurora DSQL
     status = Column(
         SQLEnum(
             ProductStatus,
@@ -50,8 +60,22 @@ class Product(Base):
         default=ProductStatus.active
     )
 
+    # Columna para categorias de producto
+    gender_category = Column(
+        SQLEnum(
+            GenderCategory,
+            native_enum=False,
+            length=30
+        ),
+        nullable=False
+    )
+
     # Columna para registrar ultima fecha de modificacion
-    updated_at = Column(DateTime, nullable=True, onupdate=lambda: datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime,
+        nullable=True,
+        onupdate=lambda: datetime.now(timezone.utc)
+    )
 
     # Relación con imágenes
     images = relationship(
@@ -69,17 +93,18 @@ class Product(Base):
         viewonly=True
     )
 
-    # Relación con opciones del producto (Color, Talla, etc)
-    options = relationship(
-        "ProductOption",
-        primaryjoin="Product.id == foreign(ProductOption.product_id)",
-        back_populates="product",
-        viewonly=True
-    )
 
 # Tabla variante de productos
 class ProductVariant(Base):
     __tablename__ = "product_variants"
+
+    __table_args__ = (
+        UniqueConstraint(
+            "product_id",
+            "color_id",
+            "size_id"
+        ),
+    )
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
 
@@ -92,9 +117,6 @@ class ProductVariant(Base):
     # SKU único de la variante
     sku = Column(String(100), unique=True, nullable=False, index=True)
 
-    # Firma única de la combinación (MUY IMPORTANTE)
-    signature = Column(String(255), unique=True, index=True, nullable=False)
-
     product_id = Column(String(36), nullable=False, index=True)
 
     product = relationship(
@@ -104,11 +126,23 @@ class ProductVariant(Base):
         viewonly=True
     )
 
-    # Relación con valores de la variante
-    values = relationship(
-        "VariantValue",
-        primaryjoin="ProductVariant.id == foreign(VariantValue.variant_id)",
-        back_populates="variant",
+    # Columna relacion con color
+    color_id = Column(String(36), nullable=True, index=True)
+
+    # Relación con color
+    color = relationship(
+        "Color",
+        primaryjoin="foreign(ProductVariant.color_id) == Color.id",
+        viewonly=True
+    )
+
+    # Columna relacion con tabla tamaño
+    size_id = Column(String(36), nullable=True, index=True)
+
+    # Relación con talla
+    size = relationship(
+        "Size",
+        primaryjoin="foreign(ProductVariant.size_id) == Size.id",
         viewonly=True
     )
 
@@ -119,82 +153,12 @@ class ProductVariant(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     # Fecha actualización
-    updated_at = Column(DateTime, nullable=True, onupdate=lambda: datetime.now(timezone.utc))
-
-# Clase Opciones de producto (Color, Talla, etc)
-class ProductOption(Base):
-    __tablename__ = "product_options"
-
-    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-
-    product_id = Column(String(36), nullable=False, index=True)
-
-    # Nombre de la opcion
-    name = Column(String(50), nullable=False)
-
-    # Relación con producto
-    product = relationship(
-        "Product",
-        primaryjoin="foreign(ProductOption.product_id) == Product.id",
-        back_populates="options",
-        viewonly=True
+    updated_at = Column(
+        DateTime,
+        nullable=True,
+        onupdate=lambda: datetime.now(timezone.utc)
     )
 
-    # Relación con valores
-    values = relationship(
-        "ProductOptionValue",
-        primaryjoin="ProductOption.id == foreign(ProductOptionValue.option_id)",
-        back_populates="option",
-        viewonly=True
-    )
-
-# Clase Valores de opcion del producto (Rojo, M, etc)
-class ProductOptionValue(Base):
-    __tablename__ = "product_option_values"
-
-    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-
-    option_id = Column(String(36), nullable=False, index=True)
-
-    # Valor de la opcion
-    value = Column(String(50), nullable=False)
-
-    # Relación con opción
-    option = relationship(
-        "ProductOption",
-        primaryjoin="foreign(ProductOptionValue.option_id) == ProductOption.id",
-        back_populates="values",
-        viewonly=True
-    )
-
-# Tabla intermedia variante - valores
-class VariantValue(Base):
-    __tablename__ = "variant_values"
-
-    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-
-    variant_id = Column(String(36), nullable=False, index=True)
-    option_value_id = Column(String(36), nullable=False, index=True)
-
-    # Relación con variante
-    variant = relationship(
-        "ProductVariant",
-        primaryjoin="foreign(VariantValue.variant_id) == ProductVariant.id",
-        back_populates="values",
-        viewonly=True
-    )
-
-    # Relación con valor de opción
-    option_value = relationship(
-        "ProductOptionValue",
-        primaryjoin="foreign(VariantValue.option_value_id) == ProductOptionValue.id",
-        viewonly=True
-    )
-
-    # Evitar duplicados de la misma combinación
-    __table_args__ = (
-        UniqueConstraint("variant_id", "option_value_id"),
-    )
 
 # Tabla de imagenes de productos
 class ProductImage(Base):
@@ -219,3 +183,30 @@ class ProductImage(Base):
         back_populates="images",
         viewonly=True
     )
+
+
+# Tabla colores de variante de un producto
+class Color(Base):
+    __tablename__ = "colors"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+
+    name = Column(String(50), nullable=False, unique=True)
+
+    hex_code = Column(String(7), nullable=False)
+
+    created_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc)
+    )
+
+
+# Tabla talla de un producto
+class Size(Base):
+    __tablename__ = "sizes"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+
+    name = Column(String(20), nullable=False, unique=True)
+
+    sort_order = Column(Integer, default=0)
