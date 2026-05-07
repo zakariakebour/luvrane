@@ -17,14 +17,13 @@ from moduls.stores.repositories import select_store_by_id
 from core.exceptions import ConflictException, NotFoundException, ForbiddenException, ValidationException
 #Importamos la clase de estado del producto
 from moduls.products.modules import ProductStatus, GenderCategory
-
+#Metodo de repositorio de variantes para añadri por defecto e insertar una variante vacia para producto sin variante y tener el stock
+from moduls.products.repositories.product_variant import add_product_variant
 
 #Metodo para crear producto
 def create_product_service(db, product_data, current_user_id: str):
     #Comprobamos si la tienda existe
     store = select_store_by_id(db, product_data.store_id)
-
-    #Si no existe
     if not store:
         raise NotFoundException("Boutique introuvable")
 
@@ -44,8 +43,20 @@ def create_product_service(db, product_data, current_user_id: str):
     product_dict = product_data.model_dump(exclude={"images", "variants"})
 
     #Creamos el producto
-    return create_product(db, product_dict)
+    product = create_product(db, product_dict)
 
+    #Si no se enviaron variantes creamos una variante default para guardar el stock
+    if not product_data.variants:
+        add_product_variant(db, product.id, {
+            "sku": f"DEFAULT-{product.id[:8]}",
+            "stock": 0,
+            "price": None,
+            "color_id": None,
+            "size_id": None,
+            "is_active": True
+        })
+
+    return product
 
 #Metodo para obtener producto por identificador
 def get_product_by_id_service(db, product_id: str):
