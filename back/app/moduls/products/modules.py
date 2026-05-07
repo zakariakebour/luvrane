@@ -77,6 +77,14 @@ class Product(Base):
         onupdate=lambda: datetime.now(timezone.utc)
     )
 
+    # Relación con imágenes/videos del producto principal
+    images = relationship(
+        "ProductImage",
+        primaryjoin="Product.id == foreign(ProductImage.product_id)",
+        back_populates="product",
+        viewonly=True
+    )
+
     # Relación con variantes
     variants = relationship(
         "ProductVariant",
@@ -86,6 +94,37 @@ class Product(Base):
     )
 
     # Columna de fecha de creacion del producto
+    created_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc)
+    )
+
+
+# Tabla de imagenes/videos del producto principal
+class ProductImage(Base):
+    __tablename__ = "product_images"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+
+    image_url = Column(String(255), nullable=False)
+
+    # Tipo de media
+    media_type = Column(String(255), default="image")
+
+    # Orden del carrusel
+    position = Column(Integer, default=0)
+
+    product_id = Column(String(36), nullable=False, index=True)
+
+    # Relación con producto
+    product = relationship(
+        "Product",
+        primaryjoin="foreign(ProductImage.product_id) == Product.id",
+        back_populates="images",
+        viewonly=True
+    )
+
+    # Columna de fecha de creacion del media
     created_at = Column(
         DateTime,
         default=lambda: datetime.now(timezone.utc)
