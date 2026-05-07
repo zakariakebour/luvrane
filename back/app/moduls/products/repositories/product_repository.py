@@ -19,8 +19,8 @@ def create_product(db: Session, product_data: dict) -> Product:
     return product
 
 
-#Metodo para seleccionar todos los productos con paginacion
-def get_products(db: Session, skip: int = 0, limit: int = 20) -> dict:
+#Metodo para seleccionar todos los productos con paginacion y filtro opcional de genero
+def get_products(db: Session, skip: int = 0, limit: int = 20, gender_category=None) -> dict:
     query = db.query(Product).options(
         joinedload(Product.images),
         joinedload(Product.variants).joinedload("color"),
@@ -30,9 +30,14 @@ def get_products(db: Session, skip: int = 0, limit: int = 20) -> dict:
     ).filter(
         Product.is_active == True
     )
+    #Aplicamos filtro de categoria de genero si se envia
+    if gender_category:
+        query = query.filter(Product.gender_category == gender_category)
+
     total = query.count()
     products = query.offset(skip).limit(limit).all()
     return {"total": total, "products": products}
+
 
 
 #Metodo para seleccionar producto segun su identificador
@@ -59,13 +64,26 @@ def get_product_by_name(db: Session, product_name: str):
     ).all()
 
 
-#Metodo para seleccionar producto segun nombre y su tienda
-def get_product_by_name_and_store(db: Session, product_name: str, store_id: str) -> Product:
-    return db.query(Product).filter(
-        Product.name == product_name,
-        Product.store_id == store_id
-    ).first()
 
+#Metodo para listar productos de una tienda concreta con paginacion y filtro opcional de genero
+def get_products_by_store(db: Session, store_id: str, skip: int = 0, limit: int = 20, gender_category=None) -> dict:
+    query = db.query(Product).options(
+        joinedload(Product.images),
+        joinedload(Product.variants).joinedload("color"),
+        joinedload(Product.variants).joinedload("size"),
+        joinedload(Product.variants).joinedload("images"),
+        joinedload(Product.store)
+    ).filter(
+        Product.store_id == store_id,
+        Product.is_active == True
+    )
+    #Aplicamos filtro de categoria de genero si se envia
+    if gender_category:
+        query = query.filter(Product.gender_category == gender_category)
+
+    total = query.count()
+    products = query.offset(skip).limit(limit).all()
+    return {"total": total, "products": products}
 
 #Metodo para eliminar producto (soft delete)
 def delete_product(db: Session, product: Product) -> Product:
