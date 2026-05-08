@@ -9,7 +9,7 @@ from moduls.products.repositories.product_repository import (
     get_product_by_name_and_store,
     update_product_status,
     get_product_status,
-    get_products_by_store
+    get_products_by_store,
 )
 #Importamos el metodo de seleccion de la tienda
 from moduls.stores.repositories import select_store_by_id
@@ -19,6 +19,7 @@ from core.exceptions import ConflictException, NotFoundException, ForbiddenExcep
 from moduls.products.modules import ProductStatus, GenderCategory
 #Metodo de repositorio de variantes para añadri por defecto e insertar una variante vacia para producto sin variante y tener el stock
 from moduls.products.repositories.product_variant import add_product_variant
+from moduls.products.schemas import ProductResponse
 
 #Metodo para crear producto
 def create_product_service(db, product_data, current_user_id: str):
@@ -79,10 +80,22 @@ def get_product_by_name_service(db, product_name: str):
     return products
 
 
-#Metodo para listar productos con paginacion y filtro opcional de genero
 def get_products_service(db, skip, limit, gender_category=None):
-    #Devolvemos los productos con paginación y filtro
-    return get_products(db, skip=skip, limit=limit, gender_category=gender_category)
+    data = get_products(db, skip=skip, limit=limit, gender_category=gender_category)
+
+    products_with_store = []
+
+    for product in data["products"]:
+        product_dict = ProductResponse.model_validate(product).model_dump()
+
+        product_dict["store_name"] = product.store.name if product.store else None
+
+        products_with_store.append(product_dict)
+
+    return {
+        "total": data["total"],
+        "products": products_with_store
+    }
 
 
 #Metodo para actualizar un producto
@@ -165,3 +178,4 @@ def get_products_by_store_service(db, store_id: str, skip: int = 0, limit: int =
         
 #Devolvemos productos activos de la tienda con paginacion y filtro
     return get_products_by_store(db, store_id, skip=skip, limit=limit, gender_category=gender_category)
+

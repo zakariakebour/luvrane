@@ -204,7 +204,7 @@ class ProductResponse(ProductBase):
     is_active: bool
     status: str
     created_at: Optional[datetime] = None
-
+    store_name: Optional[str] = None
     class Config:
         from_attributes = True
 

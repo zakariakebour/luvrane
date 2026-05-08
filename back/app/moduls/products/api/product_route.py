@@ -19,7 +19,7 @@ from moduls.products.services.product_service import (
     delete_product_service,
     get_product_status_service,
     update_product_status_service,
-    get_products_by_store_service
+    get_products_by_store_service,
 )
 #Importamos base de datos
 from core.database import get_db
@@ -42,6 +42,24 @@ def create_product(
 ):
     return create_product_service(db, product_data, current_user.id)
 
+#Endpoint para listar todos los productos con paginacion — publico
+@router.get("/", response_model=ProductsPageResponse)
+def get_products(
+    skip: int = 0,
+    limit: int = 20,
+    #Filtro opcional por categoria de genero
+    gender_category: Optional[GenderCategory] = Query(None),
+    db: Session = Depends(get_db)
+):
+    return get_products_service(db, skip=skip, limit=limit, gender_category=gender_category)
+
+#Endpoint para buscar producto por nombre — publico
+@router.get("/search", response_model=List[ProductResponse])
+def get_product_by_name(
+    name: str,
+    db: Session = Depends(get_db)
+):
+    return get_product_by_name_service(db, name)
 
 #Endpoint para listar productos de una tienda concreta — publico
 @router.get("/store/{store_id}", response_model=ProductsPageResponse)
@@ -54,28 +72,6 @@ def get_products_by_store(
     db: Session = Depends(get_db)
 ):
     return get_products_by_store_service(db, store_id, skip=skip, limit=limit, gender_category=gender_category)
-
-
-#Endpoint para listar todos los productos con paginacion — publico
-@router.get("/", response_model=ProductsPageResponse)
-def get_products(
-    skip: int = 0,
-    limit: int = 20,
-    #Filtro opcional por categoria de genero
-    gender_category: Optional[GenderCategory] = Query(None),
-    db: Session = Depends(get_db)
-):
-    return get_products_service(db, skip=skip, limit=limit, gender_category=gender_category)
-
-
-#Endpoint para buscar producto por nombre — publico
-@router.get("/search", response_model=List[ProductResponse])
-def get_product_by_name(
-    name: str,
-    db: Session = Depends(get_db)
-):
-    return get_product_by_name_service(db, name)
-
 
 #Endpoint para consultar estado del producto — protegido
 @router.get("/{product_id}/status")

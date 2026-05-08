@@ -22,22 +22,15 @@ def create_product(db: Session, product_data: dict) -> Product:
 
 #Metodo para seleccionar todos los productos con paginacion y filtro opcional de genero
 def get_products(db: Session, skip: int = 0, limit: int = 20, gender_category=None) -> dict:
-    query = db.query(Product).options(
-        joinedload(Product.images),
-        joinedload(Product.variants).joinedload(ProductVariant.color),
-        joinedload(Product.variants).joinedload(ProductVariant.size),
-        joinedload(Product.variants).joinedload(ProductVariant.images),
-        joinedload(Product.store)
-    ).filter(
-        Product.is_active == True
-    )
-    #Aplicamos filtro de categoria de genero si se envia
+    query = db.query(Product).options(joinedload(Product.store)).filter(Product.is_active == True)
+    
     if gender_category:
         query = query.filter(Product.gender_category == gender_category)
-
+        
     total = query.count()
-    products = query.offset(skip).limit(limit).all()
-    return {"total": total, "products": products}
+    items = query.offset(skip).limit(limit).all()
+    
+    return {"products": items, "total": total}
 
 
 
@@ -146,3 +139,4 @@ def get_product_by_name_and_store(db: Session, name: str, store_id: str):
         )
         .first()
     )
+
