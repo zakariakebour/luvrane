@@ -20,6 +20,8 @@ from moduls.products.modules import ProductStatus, GenderCategory
 #Metodo de repositorio de variantes para añadri por defecto e insertar una variante vacia para producto sin variante y tener el stock
 from moduls.products.repositories.product_variant import add_product_variant
 from moduls.products.schemas import ProductResponse
+#Importamos el metodo de update para variante
+from moduls.products.repositories.product_variant import update_variant
 
 #Metodo para crear producto
 def create_product_service(db, product_data, current_user_id: str):
@@ -41,21 +43,25 @@ def create_product_service(db, product_data, current_user_id: str):
         raise ConflictException("Un produit avec ce nom existe déjà dans cette boutique")
 
     #Convertimos el producto a diccionario excluyendo relaciones que se crean por separado
-    product_dict = product_data.model_dump(exclude={"images", "variants"})
-
-    #Creamos el producto
+    product_dict = product_data.model_dump(exclude={"images", "variants","stock"})
+  
+  
     product = create_product(db, product_dict)
-
-    #Si no se enviaron variantes creamos una variante default para guardar el stock
     if not product_data.variants:
         add_product_variant(db, product.id, {
             "sku": f"DEFAULT-{product.id[:8]}",
-            "stock": 0,
-            "price": None,
+            "stock": getattr(product_data, 'stock', 0),
+            "price": product_data.price,
             "color_id": None,
             "size_id": None,
             "is_active": True
         })
+    # Si hay variantes las guardamos una en una
+    else:
+        for variant in product_data.variants:
+            # Aquí llamamos a tu repositorio de variantes para cada una
+            variant_dict = variant.model_dump()
+            add_product_variant(db, product.id, variant_dict)
 
     return product
 
@@ -98,30 +104,29 @@ def get_products_service(db, skip, limit, gender_category=None):
     }
 
 
-#Metodo para actualizar un producto
 def update_product_service(db, product_data, product_id: str, current_user_id: str):
-    #Comprobamos si el producto existe
+    # 1. Comprobaciones de existencia y permisos (ya las tienes)
     product = get_product_by_id(db, product_id)
     if not product:
         raise NotFoundException("Produit introuvable")
 
-    #Comprobamos si el producto esta activo
-    if not product.is_active:
-        raise ForbiddenException("Produit non disponible")
-
-    #Comprobamos si el usuario es el dueño de la tienda
     store = select_store_by_id(db, product.store_id)
     if store.owner_id != current_user_id:
         raise ForbiddenException("Accès interdit")
 
-    #Si cambia el nombre comprobamos que no exista otro con ese nombre en la misma tienda
-    if product_data.name and product_data.name != product.name:
-        if get_product_by_name_and_store(db, product_data.name, product.store_id):
-            raise ConflictException("Un produit avec ce nom existe déjà dans cette boutique")
+    # 2. Gestionar el Stock si viene en el product_data
+    # Solo si el producto es "simple" (tiene una sola variante y es la DEFAULT)
+    if hasattr(product_data, 'stock') and product_data.stock is not None:
+        # Buscamos si existe la variante por defecto
+        default_variant = next((v for v in product.variants if "DEFAULT" in v.sku), None)
+        
+        if default_variant:
+            # Actualizamos el stock en la tabla de variantes
+            update_variant(db, default_variant.id, {"stock": product_data.stock})
 
-    #Convertimos a diccionario ignorando campos None y relaciones
-    product_dict = product_data.model_dump(exclude_none=True)
-
+    # 3. Actualizar los datos básicos del producto (nombre, descripción, precio base)
+    product_dict = product_data.model_dump(exclude_none=True, exclude={"variants", "stock"})
+    
     return update_product(db, product, product_dict)
 
 

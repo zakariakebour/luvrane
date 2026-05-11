@@ -1,5 +1,8 @@
 from sqlalchemy.orm import Session
 from moduls.users.modules import CartItem
+from sqlalchemy.orm import Session, joinedload 
+#Importamos modelos de productos para selects con JOIN
+from moduls.products.modules import Product,ProductVariant
 
 # Añadir producto al carrito
 def add_cart_item(db: Session, user_id: str, product_id: str, variant_id: str = None, quantity: int = 1) -> CartItem:
@@ -14,9 +17,15 @@ def add_cart_item(db: Session, user_id: str, product_id: str, variant_id: str = 
     db.refresh(item)
     return item
 
-# Obtener carrito del usuario
+# Obtener carrito del usuario con JOIN para atrear relacion que contiene los datos detallados del producto
 def get_cart(db: Session, user_id: str) -> list:
-    return db.query(CartItem).filter(CartItem.user_id == user_id).all()
+    return db.query(CartItem).options(
+        joinedload(CartItem.product).joinedload(Product.images),
+        joinedload(CartItem.variant)
+            .joinedload(ProductVariant.color),
+        joinedload(CartItem.variant)
+            .joinedload(ProductVariant.size),
+    ).filter(CartItem.user_id == user_id).all()
 
 #Metodo para seleccionar producto dentro de el carrito
 def get_item(db: Session,user_id:str,variant_id: str = None,product_id: str = None):
@@ -48,3 +57,6 @@ def remove_cart_item(db: Session, item_id: str) -> None:
 def clear_cart(db: Session, user_id: str) -> None:
     db.query(CartItem).filter(CartItem.user_id == user_id).delete()
     db.commit()
+
+def get_cart_item_by_id(db: Session, item_id: str):
+    return db.query(CartItem).filter(CartItem.id == item_id).first()

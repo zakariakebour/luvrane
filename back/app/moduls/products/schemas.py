@@ -127,7 +127,8 @@ class ProductBase(BaseModel):
     price: Decimal = Field(..., gt=0)
     # Categoria de genero del producto
     gender_category: str
-
+    
+    stock: int = Field(0, ge=0)
     @field_validator("name")
     @classmethod
     def validate_name(cls, value):

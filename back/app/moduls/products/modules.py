@@ -6,7 +6,6 @@ import uuid
 from datetime import datetime, timezone
 import enum
 
-
 # Clase para controlar estado del producto
 class ProductStatus(enum.Enum):
     active = "active"

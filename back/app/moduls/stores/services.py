@@ -16,7 +16,7 @@ from core.exceptions import (
 )
 
 # Importamos metodo que genera URL presignada para archivos (imagenes,videos)
-from core.s3 import generate_presigned_url
+from core.s3 import generate_presigned_url,delete_file
 from moduls.products.schemas import ProductResponse
 
 
@@ -125,6 +125,7 @@ def delete_store_service(db, store_id: str, owner_id):
 
 # Metodo para actualizar tienda
 def update_store_service(db, store_id: str, store_data, owner_id):
+
     # Comprobamos si la tienda seleccionada existe
     store = select_store_by_id(db, store_id)
 
@@ -139,9 +140,36 @@ def update_store_service(db, store_id: str, store_data, owner_id):
     # Convertimos el schema a diccionario ignorando los campos None
     store_dict = store_data.model_dump(exclude_none=True)
 
-    # Si existe y todo correcto devolvemos la actualizacion
-    return update_store(db, store, store_dict)
+    # Validamos nombre solo si viene en la petición
+    if "name" in store_dict:
 
+        new_name = store_dict["name"].strip()
+
+        existing_store = get_store_by_name(db, new_name)
+
+        # Verificamos que no sea otra tienda
+        if existing_store and existing_store.id != store.id:
+            raise ConflictException("Ce nom de magasin est déjà utilisé")
+
+        store_dict["name"] = new_name
+
+     #Si cambia la foto de perfil eliminamos la anterior de S3
+    if "photo_profile" in store_dict and store.photo_profile:
+        try:
+            delete_file(store.photo_profile)
+        except Exception:
+            pass  # si falla no bloqueamos la actualización
+
+    #Si cambia la imagen de portada eliminamos la anterior de S3
+    if "image" in store_dict and store.image:
+        try:
+            delete_file(store.image)
+        except Exception:
+            pass  # si falla no bloqueamos la actualización
+
+
+    # Actualizamos
+    return update_store(db, store, store_dict)
 
 # Metodo para obtener la tienda del usuario autenticado
 def get_my_store_service(db, owner_id: str):

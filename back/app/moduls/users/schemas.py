@@ -40,16 +40,44 @@ class CartItemCreate(BaseModel):
     quantity: int = Field(1, gt=0)
 
 # Schema de respuesta de item del carrito
+# Schema de respuesta de item del carrito con información detallada
 class CartItemResponse(BaseModel):
     id: str
     product_id: str
     variant_id: Optional[str] = None
     quantity: int
     created_at: Optional[datetime] = None
+    
+    # Información extra para el Frontend
+    product_name: Optional[str] = None
+    price: Optional[float] = None
+    image_url: Optional[str] = None
+    variant_name: Optional[str] = None 
 
     class Config:
         from_attributes = True
 
+    @classmethod
+    def model_validate(cls, obj):
+        #Obtenemos la instancia base de Pydantic
+        instance = super().model_validate(obj)
+        
+        #Asignamos manualmente los valores desde las relaciones
+        # SQLAlchemy ya los tiene cargados gracias al joinedload del repositorio
+        if hasattr(obj, 'product') and obj.product:
+            instance.product_name = obj.product.name
+            if obj.product.images:
+                instance.image_url = obj.product.images[0].image_url
+        
+        if hasattr(obj, 'variant') and obj.variant:
+            instance.price = obj.variant.price
+            # Formateamos el nombre de la variante
+            color = obj.variant.color.name if obj.variant.color else ""
+            size = obj.variant.size.name if obj.variant.size else ""
+            instance.variant_name = f"{color} {size}".strip() or "Standard"
+            
+        return instance
+    
 # Schema de respuesta de like
 class ProductLikeResponse(BaseModel):
     id: str
