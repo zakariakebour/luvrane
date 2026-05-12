@@ -17,7 +17,8 @@ class AddressCreate(BaseModel):
     wilaya: str = Field(..., min_length=2, max_length=100)
     postal_code: Optional[str] = Field(None, max_length=20)
     is_default: bool = False
-
+    phone: str = Field(..., min_length=8, max_length=20)
+    
 # Schema de respuesta de direccion
 class AddressResponse(BaseModel):
     id: str
@@ -27,7 +28,7 @@ class AddressResponse(BaseModel):
     postal_code: Optional[str] = None
     is_default: bool
     created_at: Optional[datetime] = None
-
+    phone: str
     class Config:
         from_attributes = True
 
