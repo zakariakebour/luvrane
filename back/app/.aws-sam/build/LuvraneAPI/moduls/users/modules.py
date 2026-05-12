@@ -85,7 +85,7 @@ class User(Base):
 
     #Proveedor de autenticacion (local o google)
     auth_provider = Column(String(50), default="local")
-
+    
 # Tabla de direcciones del usuario, un usuario puede tener varias direcciones
 class UserAddress(Base):
     __tablename__ = "user_addresses"
@@ -103,6 +103,11 @@ class UserAddress(Base):
         viewonly=True
     )
 
+    #Columna nombre completo
+    full_name = Column(String(255), nullable=False)
+
+    #Columna numero de telefono
+    phone = Column(String(20), nullable=True)
     # Calle y numero
     street = Column(String(255), nullable=False)
 

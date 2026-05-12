@@ -12,23 +12,25 @@ class UserRole(str, Enum):
 
 # Schema de entrada para crear direccion
 class AddressCreate(BaseModel):
+    full_name: str = Field(..., min_length=2, max_length=255)
     street: str = Field(..., min_length=2, max_length=255)
     city: str = Field(..., min_length=2, max_length=100)
     wilaya: str = Field(..., min_length=2, max_length=100)
     postal_code: Optional[str] = Field(None, max_length=20)
     is_default: bool = False
     phone: str = Field(..., min_length=8, max_length=20)
-    
+       
 # Schema de respuesta de direccion
 class AddressResponse(BaseModel):
     id: str
+    full_name: Optional[str] = None
     street: str
     city: str
     wilaya: str
     postal_code: Optional[str] = None
     is_default: bool
     created_at: Optional[datetime] = None
-    phone: str
+    phone: Optional[str] = None
     class Config:
         from_attributes = True
 

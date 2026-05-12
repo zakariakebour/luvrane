@@ -19,13 +19,23 @@ def add_cart_item(db: Session, user_id: str, product_id: str, variant_id: str = 
 
 # Obtener carrito del usuario con JOIN para atrear relacion que contiene los datos detallados del producto
 def get_cart(db: Session, user_id: str) -> list:
-    return db.query(CartItem).options(
-        joinedload(CartItem.product).joinedload(Product.images),
-        joinedload(CartItem.variant)
-            .joinedload(ProductVariant.color),
-        joinedload(CartItem.variant)
-            .joinedload(ProductVariant.size),
-    ).filter(CartItem.user_id == user_id).all()
+    return (
+        db.query(CartItem)
+        .join(Product, Product.id == CartItem.product_id)
+        .options(
+            joinedload(CartItem.product).joinedload(Product.images),
+            joinedload(CartItem.variant)
+                .joinedload(ProductVariant.color),
+            joinedload(CartItem.variant)
+                .joinedload(ProductVariant.size),
+        )
+        .filter(
+            CartItem.user_id == user_id,
+            Product.is_active.is_(True),
+            ProductVariant.stock >= 1
+        )
+        .all()
+    )
 
 #Metodo para seleccionar producto dentro de el carrito
 def get_item(db: Session,user_id:str,variant_id: str = None,product_id: str = None):

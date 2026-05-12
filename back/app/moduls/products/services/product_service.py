@@ -22,6 +22,7 @@ from moduls.products.repositories.product_variant import add_product_variant
 from moduls.products.schemas import ProductResponse
 #Importamos el metodo de update para variante
 from moduls.products.repositories.product_variant import update_variant
+from core.s3 import delete_file
 
 #Metodo para crear producto
 def create_product_service(db, product_data, current_user_id: str):
@@ -145,6 +146,26 @@ def delete_product_service(db, product_id: str, current_user_id: str):
     store = select_store_by_id(db, product.store_id)
     if store.owner_id != current_user_id:
         raise ForbiddenException("Accès interdit")
+    
+    #Eliminar imágenes de la galería del producto
+    if product.images:
+        for image in product.images:
+            try:
+                delete_file(image.image_url)
+            except Exception:
+                pass # Evitamos bloquear si un archivo ya no existe
+
+    # 2. Eliminar imágenes de las variantes
+    if product.variants:
+        for variant in product.variants:
+            if hasattr(variant, 'image_url') and variant.image_url:
+                try:
+                    delete_file(variant.image_url)
+                except Exception:
+                    pass
+    # --- FIN LÓGICA S3 ---
+
+    return delete_product(db, product)
 
     return delete_product(db, product)
 

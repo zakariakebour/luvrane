@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 #Importamos tabla de productos
 from moduls.users.modules import ProductLike
+from moduls.products.modules import Product
 
 #Añadir producto al dar like
 def add_like(db: Session, user_id: str, product_id: str) -> ProductLike:  
@@ -23,8 +24,16 @@ def remove_like(db: Session, user_id: str, product_id: str) -> None:
 
 #Listar productos deseados
 def get_user_likes(db: Session, user_id: str) -> list:   
-    #Devolvemos la consulta                 
-    return db.query(ProductLike).filter(ProductLike.user_id == user_id).all()
+    #Devolvemos la consulta ,solo productos activos          
+        return (
+        db.query(ProductLike)
+        .join(Product, Product.id == ProductLike.product_id)
+        .filter(
+            ProductLike.user_id == user_id,
+            Product.is_active == True
+        )
+        .all()
+    )
 
 #Metodo para buscar un like concreto de un usuario a un producto
 def get_like(db: Session, user_id: str, product_id: str) -> ProductLike:

@@ -73,6 +73,9 @@ def delete_product_image_service(db, image_id: str, current_user_id: str):
     if store.owner_id != current_user_id:
         raise ForbiddenException("Accès interdit")
     #Eliminamos el archivo del bucket S3
-    delete_file(image.image_url)
+    try:
+        delete_file(image.image_url)
+    except Exception:
+        pass  # si falla no bloqueamos la eliminacion de la DB
     #Eliminamos de la DB
     delete_product_image(db, image_id)

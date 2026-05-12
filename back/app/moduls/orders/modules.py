@@ -5,6 +5,7 @@ from core.database import Base
 from datetime import datetime, timezone
 import enum
 import uuid
+from sqlalchemy import ForeignKey
 
 #Estados del pedido
 class OrderStatus(enum.Enum):
@@ -47,7 +48,8 @@ class OrderItem(Base):
     __tablename__ = "order_items"
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    order_id = Column(String(36), Column(String(36), nullable=False, index=True))
+    order_id = Column(String(36),ForeignKey("orders.id"),nullable=False,index=True)
+
     product_id = Column(String(36), nullable=False, index=True)
     variant_id = Column(String(36), nullable=True, index=True)
 

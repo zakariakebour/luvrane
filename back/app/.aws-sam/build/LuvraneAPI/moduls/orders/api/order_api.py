@@ -1,35 +1,37 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, status, BackgroundTasks
 from sqlalchemy.orm import Session
-#Importamos schemas
+
+# Importamos schemas
 from moduls.orders.schemas import OrderCreate, OrderResponse, OrderUpdateStatus, OrdersPageResponse
-#Importamos servicios
+
+# Importamos servicios
 from moduls.orders.services.order_service import (
     create_order_service,
-    get_order_by_id_service,
     get_orders_by_user_service,
-    get_orders_by_store_service,
+    get_order_by_store_service,
     update_order_status_service,
     cancel_order_service
 )
-#Importamos base de datos
+
+# Importamos infraestructura
 from core.database import get_db
-#Importamos dependencia para obtener usuario autenticado
 from core.dependencies import get_current_user
-#Importamos modulo de usuario
 from moduls.users.modules import User
 
-router = APIRouter(tags=["Orders"])
+router = APIRouter(prefix="/orders", tags=["Orders"])
 
-#Endpoint para crear pedido — protegido
-@router.post("/", response_model=OrderResponse, status_code=201)
+# Endpoint para crear pedido — protegido
+@router.post("/", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
 def create_order(
     order_data: OrderCreate,
+    background_tasks: BackgroundTasks, # Añadido para el envío de emails asíncrono
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    return create_order_service(db, current_user.id, order_data)
+    # Pasamos background_tasks al servicio
+    return create_order_service(db, current_user.id, order_data, background_tasks)
 
-#Endpoint para listar pedidos del usuario — protegido
+# Endpoint para listar pedidos del usuario — protegido
 @router.get("/me", response_model=OrdersPageResponse)
 def get_my_orders(
     skip: int = 0,
@@ -37,18 +39,25 @@ def get_my_orders(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    return get_orders_by_user_service(db, current_user.id, skip=skip, limit=limit)
+    # El servicio devuelve {"total": X, "orders": [...]}
+    result = get_orders_by_user_service(db, current_user.id, skip=skip, limit=limit)
+    return {
+        "total": result["total"],
+        "orders": result["orders"],
+        "skip": skip,
+        "limit": limit
+    }
 
-#Endpoint para obtener pedido por identificador — protegido
+# Endpoint para obtener pedido por identificador — protegido
 @router.get("/{order_id}", response_model=OrderResponse)
 def get_order(
     order_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    return get_order_by_id_service(db, order_id, current_user.id)
+    return get_order_by_store_service(db, order_id, current_user.id)
 
-#Endpoint para listar pedidos de una tienda (owner) — protegido
+# Endpoint para listar pedidos de una tienda (owner) — protegido
 @router.get("/store/{store_id}", response_model=OrdersPageResponse)
 def get_store_orders(
     store_id: str,
@@ -57,9 +66,15 @@ def get_store_orders(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    return get_orders_by_store_service(db, store_id, current_user.id, skip=skip, limit=limit)
+    result = get_order_by_store_service(db, store_id, current_user.id, skip=skip, limit=limit)
+    return {
+        "total": result["total"],
+        "orders": result["orders"],
+        "skip": skip,
+        "limit": limit
+    }
 
-#Endpoint para actualizar estado del pedido (owner) — protegido
+# Endpoint para actualizar estado del pedido (owner) — protegido
 @router.patch("/{order_id}/status", response_model=OrderResponse)
 def update_order_status(
     order_id: str,
@@ -69,7 +84,7 @@ def update_order_status(
 ):
     return update_order_status_service(db, order_id, status_data.status, current_user.id)
 
-#Endpoint para cancelar pedido (usuario) — protegido
+# Endpoint para cancelar pedido (usuario) — protegido
 @router.patch("/{order_id}/cancel", response_model=OrderResponse)
 def cancel_order(
     order_id: str,
@@ -77,3 +92,4 @@ def cancel_order(
     current_user: User = Depends(get_current_user)
 ):
     return cancel_order_service(db, order_id, current_user.id)
+

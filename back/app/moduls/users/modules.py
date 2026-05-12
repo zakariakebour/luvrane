@@ -103,8 +103,11 @@ class UserAddress(Base):
         viewonly=True
     )
 
+    #Columna nombre completo
+    full_name = Column(String(255), nullable=False)
+
     #Columna numero de telefono
-    phone = Column(String(20), nullable=False)
+    phone = Column(String(20), nullable=True)
     # Calle y numero
     street = Column(String(255), nullable=False)
 

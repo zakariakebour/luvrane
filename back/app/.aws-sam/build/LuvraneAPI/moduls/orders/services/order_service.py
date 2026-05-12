@@ -1,7 +1,8 @@
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
+from fastapi import BackgroundTasks
 
-#Importamos repositorios de pedidos
+# Repositorios de pedidos e items
 from moduls.orders.repositories.order_repository import (
     create_order,
     get_order_by_id,
@@ -9,93 +10,79 @@ from moduls.orders.repositories.order_repository import (
     get_orders_by_store,
     update_order_status
 )
-#Importamos repositorio de items
 from moduls.orders.repositories.order_item_repository import create_order_items_bulk
-#Importamos repositorio de productos para verificar precio y stock
-from moduls.products.repositories.product_repository import get_product_by_id, update_product
-#Importamos repositorio de variantes para verificar stock
-from moduls.products.repositories.product_variant import get_product_variant_by_id, update_product_variant
-#Importamos repositorio de carrito para vaciarlo al finalizar pedido
+
+# Repositorios de productos y variantes
+from moduls.products.repositories.product_repository import get_product_by_id
+from moduls.products.repositories.product_variant import get_product_variant_by_id
+
+# Repositorios de usuario (Carrito, Direcciones, Tienda)
 from moduls.users.repositories.cart_repository import clear_cart
-#Importamos repositorio de direcciones para verificar que existe
 from moduls.users.repositories.adress_repository import get_direction_by_id
-#Importamos repositorio de tienda para verificar owner
 from moduls.stores.repositories import select_store_by_id
-#Importamos excepciones
+
+# Excepciones y Estados
 from core.exceptions import (
     NotFoundException,
     ForbiddenException,
     ValidationException,
     ConflictException
 )
-#Importamos estados del pedido
 from moduls.orders.modules import OrderStatus
 
+# --- SERVICIOS PRINCIPALES ---
 
-#Metodo para crear pedido desde el carrito del usuario
-def create_order_service(db: Session, user_id: str, order_data):
+def create_order_service(db: Session, user_id: str, order_data, background_tasks: BackgroundTasks):
+    """
+    Crea un pedido, gestiona el stock de forma atómica y vacía el carrito.
+    """
     try:
-        #Comprobamos que la direccion existe y pertenece al usuario
+        # 1. Validar dirección
         address = get_direction_by_id(db, order_data.address_id)
         if not address:
             raise NotFoundException("Adresse introuvable")
         if address.user_id != user_id:
-            raise ForbiddenException("Accès interdit")
+            raise ForbiddenException("Accès interdit à cette adresse")
 
-        #Comprobamos que hay items en el pedido
+        # 2. Validar que vengan items en la petición
         if not order_data.items:
             raise ValidationException("Le panier est vide")
 
-        #Procesamos cada item del pedido
-        items_data = []
+        items_to_process = []
         total_price = 0
 
+        # 3. Validar Stock y Precios (Sin guardar nada aún)
         for item in order_data.items:
-            #Comprobamos que el producto existe y esta activo
             product = get_product_by_id(db, item.product_id)
-            if not product:
-                raise NotFoundException(f"Produit introuvable")
-            if not product.is_active:
-                raise ForbiddenException(f"Produit non disponible")
+            if not product or not product.is_active:
+                raise NotFoundException(f"Produit non disponible: {item.product_id}")
 
-            #Calculamos el precio unitario
             unit_price = product.price
 
-            #Si tiene variante comprobamos que existe y tiene stock
+            # Gestión de Variantes
             if item.variant_id:
                 variant = get_product_variant_by_id(db, item.variant_id)
-                if not variant:
-                    raise NotFoundException("Variante introuvable")
-
-                #Validamos que la variante pertenece al producto
-                if variant.product_id != product.id:
+                if not variant or variant.product_id != product.id:
                     raise ValidationException("Variante invalide pour ce produit")
 
                 if variant.stock < item.quantity:
-                    raise ValidationException("Stock insuffisant")
+                    raise ConflictException(f"Stock insuffisant pour la variante du produit {product.name}")
 
-                #Descontamos stock de la variante
+                # Restamos stock del objeto (SQLAlchemy lo detecta automáticamente)
                 variant.stock -= item.quantity
-                update_product_variant(db, variant)
-
-                #Si la variante tiene precio propio lo usamos
                 if variant.price:
                     unit_price = variant.price
             else:
-                #Validamos stock en producto sin variante
+                # Gestión de Producto Simple
                 if product.stock < item.quantity:
-                    raise ValidationException("Stock insuffisant")
-
-                #Descontamos stock del producto
+                    raise ConflictException(f"Stock insuffisant para el producto {product.name}")
+                
                 product.stock -= item.quantity
-                update_product(db, product)
 
-            #Calculamos precio total del item
             item_total = unit_price * item.quantity
             total_price += item_total
 
-            #Preparamos datos del item
-            items_data.append({
+            items_to_process.append({
                 "product_id": item.product_id,
                 "variant_id": item.variant_id,
                 "quantity": item.quantity,
@@ -103,7 +90,7 @@ def create_order_service(db: Session, user_id: str, order_data):
                 "total_price": item_total
             })
 
-        #Creamos el pedido
+        # 4. Crear la cabecera del pedido
         order_dict = {
             "user_id": user_id,
             "address_id": order_data.address_id,
@@ -112,110 +99,116 @@ def create_order_service(db: Session, user_id: str, order_data):
             "status": OrderStatus.pending
         }
         order = create_order(db, order_dict)
+        db.flush() # Sincroniza para obtener order.id
 
-        #Añadimos el order_id a cada item y los creamos en bulk
-        for item in items_data:
+        # 5. Crear los items del pedido en bulk
+        for item in items_to_process:
             item["order_id"] = order.id
-        create_order_items_bulk(db, items_data)
+        create_order_items_bulk(db, items_to_process)
 
-        #Vaciamos el carrito del usuario
+        # 6. Limpiar carrito y confirmar transacción
         clear_cart(db, user_id)
-
+        
         db.commit()
+        db.refresh(order)
+
+        # 7. Tarea de Email en segundo plano (Pendiente de implementar función)
+        # background_tasks.add_task(send_order_confirmation_email, user_id, order.id)
         return order
 
     except Exception as e:
         db.rollback()
         raise e
 
-
-#Metodo para obtener pedido por identificador
-def get_order_by_id_service(db: Session, order_id: str, user_id: str):
-    #Buscamos el pedido
+def cancel_order_service(db: Session, order_id: str, user_id: str):
+    """
+    Cancela un pedido y DEVUELVE el stock a los productos/variantes.
+    """
     order = get_order_by_id(db, order_id)
     if not order:
         raise NotFoundException("Commande introuvable")
-
-    #Comprobamos que el pedido pertenece al usuario
+    
     if order.user_id != user_id:
         raise ForbiddenException("Accès interdit")
 
-    return order
+    if order.status not in [OrderStatus.pending, OrderStatus.confirmed]:
+        raise ConflictException("La commande ne puede ser cancelada en su estado actual")
 
+    try:
+        # Devolver stock de cada item
+        for item in order.items:
+            if item.variant_id:
+                variant = get_product_variant_by_id(db, item.variant_id)
+                if variant:
+                    variant.stock += item.quantity
+            else:
+                product = get_product_by_id(db, item.product_id)
+                if product:
+                    product.stock += item.quantity
+        
+        updated_order = update_order_status(db, order, OrderStatus.cancelled)
+        db.commit()
+        return updated_order
+    except Exception as e:
+        db.rollback()
+        raise e
 
-#Metodo para listar pedidos del usuario
-def get_orders_by_user_service(db: Session, user_id: str, skip: int = 0, limit: int = 20):
-    return get_orders_by_user(db, user_id, skip=skip, limit=limit)
+#Gestion de estados y listados
 
-
-#Metodo para listar pedidos de una tienda (para el owner)
-def get_orders_by_store_service(db: Session, store_id: str, current_user_id: str, skip: int = 0, limit: int = 20):
-    #Comprobamos que el usuario es el owner de la tienda
-    store = select_store_by_id(db, store_id)
-    if not store:
-        raise NotFoundException("Boutique introuvable")
-    if store.owner_id != current_user_id:
-        raise ForbiddenException("Accès interdit")
-
-    return get_orders_by_store(db, store_id, skip=skip, limit=limit)
-
-#Metodo para actualizar estado del pedido
 def update_order_status_service(db: Session, order_id: str, status: OrderStatus, current_user_id: str):
-    #Buscamos el pedido
+    """
+    Actualiza el estado del pedido validando el rol de owner y las transiciones permitidas.
+    """
     order = get_order_by_id(db, order_id)
-    if not order:
-        raise NotFoundException("Commande introuvable")
+    if not order or not order.items:
+        raise NotFoundException("Commande introuvable ou vide")
 
-    #Comprobamos que el usuario es owner de la tienda del pedido
-    if not order.items:
-        raise ValidationException("Commande sans articles")
-
-    #Obtenemos el store del primer producto (asumimos que todos son de la misma tienda)
+    # Validar que el usuario es el dueño de la tienda (del primer producto)
     first_product = order.items[0].product
-
-    if not first_product:
-        raise NotFoundException("Produit introuvable")
-
     store = select_store_by_id(db, first_product.store_id)
-    if not store:
-        raise NotFoundException("Boutique introuvable")
+    if not store or store.owner_id != current_user_id:
+        raise ForbiddenException("Seul le propriétaire de la boutique peut modifier le statut")
 
-    if store.owner_id != current_user_id:
-        raise ForbiddenException("Accès interdit")
-
-    #Comprobamos que el pedido no esta ya entregado o cancelado
     if order.status in [OrderStatus.delivered, OrderStatus.cancelled]:
-        raise ConflictException("Commande déjà finalisée")
+        raise ConflictException("Impossible de modifier une commande déjà finalisée")
 
-    #Comprobamos transiciones de estado validas
+    # Reglas de transiciones
     valid_transitions = {
-        OrderStatus.pending:    [OrderStatus.confirmed, OrderStatus.cancelled],
-        OrderStatus.confirmed:  [OrderStatus.preparing, OrderStatus.cancelled],
-        OrderStatus.preparing:  [OrderStatus.shipped, OrderStatus.cancelled],
-        OrderStatus.shipped:    [OrderStatus.delivered, OrderStatus.returned],
-        OrderStatus.returned:   []
+        OrderStatus.pending:   [OrderStatus.confirmed, OrderStatus.cancelled],
+        OrderStatus.confirmed: [OrderStatus.preparing, OrderStatus.cancelled],
+        OrderStatus.preparing: [OrderStatus.shipped, OrderStatus.cancelled],
+        OrderStatus.shipped:   [OrderStatus.delivered, OrderStatus.returned],
+        OrderStatus.returned:  []
     }
 
     if status not in valid_transitions.get(order.status, []):
-        raise ValidationException(f"Transition de statut invalide")
+        raise ValidationException(f"Transition de {order.status} vers {status} invalide")
 
-    return update_order_status(db, order, status)
-    
-#Metodo para cancelar pedido (para el usuario)
-def cancel_order_service(db: Session, order_id: str, user_id: str):
-    #Buscamos el pedido
+    try:
+        updated_order = update_order_status(db, order, status)
+        db.commit()
+        return updated_order
+    except Exception as e:
+        db.rollback()
+        raise e
+
+def get_orders_by_user_service(db: Session, user_id: str, skip: int = 0, limit: int = 20):
+    return get_orders_by_user(db, user_id, skip=skip, limit=limit)
+
+# Metodo para obtener pedido por identificador (el que llama el Router)
+def get_order_by_store_service(db: Session, order_id: str, user_id: str):
+    """
+    Busca un pedido por ID y verifica que pertenezca al usuario que lo solicita.
+    """
+    # 1. Buscamos el pedido en el repositorio
     order = get_order_by_id(db, order_id)
+    
+    # 2. Si no existe, lanzamos 404
     if not order:
         raise NotFoundException("Commande introuvable")
 
-    #Comprobamos que el pedido pertenece al usuario
+    # 3. Comprobamos que el pedido pertenece al usuario (Seguridad)
     if order.user_id != user_id:
-        raise ForbiddenException("Accès interdit")
+        raise ForbiddenException("Vous n'avez no tiene permiso para ver este pedido")
 
-    #Solo se puede cancelar si esta pendiente o confirmado
-    if order.status not in [OrderStatus.pending, OrderStatus.confirmed]:
-        raise ConflictException("Commande ne peut pas être annulée")
-
-    updated_order = update_order_status(db, order, OrderStatus.cancelled)
-    db.commit()
-    return updated_order
+    return order
