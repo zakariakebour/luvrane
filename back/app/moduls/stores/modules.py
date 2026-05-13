@@ -64,6 +64,9 @@ class Store(Base):
         viewonly=True
     )
 
+    #Columna para guardar empresa logistica
+    logistics_partner = Column(String(50), nullable=True)
+    
     #Fecha de creacion de la tienda
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
