@@ -75,3 +75,20 @@ class Store(Base):
 
     #Columna para eliminar la tienda pero no de la base de datos completamente y poder recuperarla
     is_active = Column(Boolean, default=True)
+
+class ShippingRate(Base):
+    __tablename__ = "shipping_rates"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    store_id = Column(String(36), index=True, nullable=False) # Relación lógica con Store
+    
+    # Datos de la Wilaya
+    wilaya_id = Column(Integer, nullable=False) # Código 1-58
+    wilaya_name = Column(String(50), nullable=False)
+    
+    # Tarifas
+    delivery_price = Column(Numeric(10, 2), nullable=False) # A domicilio
+    office_price = Column(Numeric(10, 2), nullable=True)    # En oficina de correos
+    
+    estimated_days = Column(Integer, default=3)
+    is_active = Column(Boolean, default=True)
