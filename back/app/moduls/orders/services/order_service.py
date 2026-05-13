@@ -1,8 +1,6 @@
 from sqlalchemy.orm import Session
 from fastapi import BackgroundTasks
 from datetime import datetime, timezone
-
-# Importamos tu futura utilidad de SES (la definimos abajo)
 from core.email_service import send_order_email
 
 from moduls.orders.repositories.order_repository import (
