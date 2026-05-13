@@ -245,7 +245,7 @@ class Color(Base):
 
     hex_code = Column(String(7), nullable=False)
 
-    # NUEVO: Relación directa con el producto para que sea privado de ese producto
+    #Relación directa con el producto para que sea privado de ese producto
     product_id = Column(String(36), nullable=False, index=True)
 
     created_at = Column(
