@@ -97,3 +97,29 @@ class StoreImagePresignedResponse(BaseModel):
     public_url: str
     image_type: str
     media_type: str
+
+# Esquema para una tarifa individual (lo que guardamos)
+class ShippingRateBase(BaseModel):
+    wilaya_id: int = Field(..., ge=1, le=58)
+    wilaya_name: str
+    delivery_price: Decimal
+    office_price: Optional[Decimal] = None
+    estimated_days: int = 3
+
+# Para crear o actualizar una tarifa
+class ShippingRateCreate(ShippingRateBase):
+    pass
+
+# Respuesta que daremos al Frontend
+class ShippingRateResponse(ShippingRateBase):
+    id: str
+    store_id: str
+    is_active: bool
+
+    class Config:
+        from_attributes = True
+
+# Esquema para actualización masiva (muy útil para el Front)
+class BulkShippingUpdate(BaseModel):
+    logistics_partner: str
+    rates: List[ShippingRateCreate]
