@@ -14,8 +14,6 @@ class OrderStatusSchema(str, Enum):
     cancelled = "cancelled"
     returned = "returned"
 
-# --- ITEMS DEL PEDIDO ---
-
 class OrderItemCreate(BaseModel):
     product_id: str
     variant_id: Optional[str] = None
