@@ -24,8 +24,16 @@ def create_order_service(db: Session, user_id: str, order_data, background_tasks
     try:
         #Validar dirección
         address = get_direction_by_id(db, order_data.address_id)
-        if not address or address.user_id != user_id:
-            raise ForbiddenException("Dirección no válida")
+
+        if not address:
+            raise NotFoundException("L'adresse n'existe pas")
+        
+        if address.user_id != user_id:
+            raise ForbiddenException("Accès interdit à cette adresse")
+        
+        #Si la direccion es a
+        if hasattr(address, 'default') and not address.default:
+            raise ValidationException("Cette adresse n'est pas activé. Veuillez en choisir une autre.")
 
         items_to_process = []
         total_price = 0
