@@ -4,7 +4,7 @@ from decimal import Decimal
 from datetime import datetime
 from enum import Enum
 
-# Enum de estados del pedido para schemas (Sincronizado con el modelo)
+# Enum de estados del pedido para schemas 
 class OrderStatusSchema(str, Enum):
     pending = "pending"
     confirmed = "confirmed"
@@ -14,15 +14,13 @@ class OrderStatusSchema(str, Enum):
     cancelled = "cancelled"
     returned = "returned"
 
-#Items del perdido
+# --- ITEMS DEL PEDIDO ---
 
-# Schema de entrada para los items dentro de un pedido
 class OrderItemCreate(BaseModel):
     product_id: str
     variant_id: Optional[str] = None
     quantity: int = Field(..., gt=0)
 
-# Schema de respuesta de item del pedido con info útil para el cliente
 class OrderItemResponse(BaseModel):
     id: str
     product_id: str
@@ -30,49 +28,50 @@ class OrderItemResponse(BaseModel):
     quantity: int
     unit_price: Decimal
     total_price: Decimal
-    
-    # Campo extra: Muy útil para no tener que hacer joins constantes en el front
-    # product_name: Optional[str] = None 
 
     class Config:
         from_attributes = True
 
 #Pedidos
 
-# Schema de entrada para crear pedido (Desde el carrito o compra directa)
 class OrderCreate(BaseModel):
     address_id: str
+    # Eliminamos store_id de aquí porque el sistema lo detectará 
+    # automáticamente de los productos del carrito por seguridad.
     notes: Optional[str] = Field(None, max_length=500)
     items: List[OrderItemCreate] = Field(..., min_length=1)
 
-# Schema para que el Admin actualice el estado
 class OrderUpdateStatus(BaseModel):
     status: OrderStatusSchema
+    tracking_number: Optional[str] = None 
 
-# Schema de respuesta principal del pedido
 class OrderResponse(BaseModel):
     id: str
     user_id: str
+    store_id: str # Añadido: Vital para el panel del dueño
     address_id: str
     status: OrderStatusSchema
     total_price: Decimal
+    tracking_number: Optional[str] = None
     notes: Optional[str] = None
     items: List[OrderItemResponse] = []
-    created_at: Optional[datetime] = None
+    
+    # Hitos temporales completos para los correos de SES
+    created_at: datetime
     updated_at: Optional[datetime] = None
+    confirmed_at: Optional[datetime] = None
+    shipped_at: Optional[datetime] = None
     delivered_at: Optional[datetime] = None
     cancelled_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
-        # Esto permite que Pydantic maneje correctamente los objetos Decimal y Datetime
         json_encoders = {
-            Decimal: lambda v: float(round(v, 2))
+            Decimal: lambda v: float(round(v, 2)),
+            datetime: lambda v: v.isoformat()
         }
 
-# Listados
-
-# Schema de paginación para el historial del usuario o panel de tienda
+#Listados
 class OrdersPageResponse(BaseModel):
     total: int
     orders: List[OrderResponse]
