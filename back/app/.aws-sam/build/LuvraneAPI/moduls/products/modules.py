@@ -129,7 +129,6 @@ class ProductImage(Base):
         default=lambda: datetime.now(timezone.utc)
     )
 
-
 # Tabla variante de productos
 class ProductVariant(Base):
     __tablename__ = "product_variants"
@@ -203,7 +202,6 @@ class ProductVariant(Base):
         onupdate=lambda: datetime.now(timezone.utc)
     )
 
-
 # Tabla de imagenes/videos de variantes
 class VariantMedia(Base):
     __tablename__ = "variant_media"
@@ -242,15 +240,18 @@ class Color(Base):
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
 
-    name = Column(String(50), nullable=False, unique=True)
+    # Se elimina unique=True para permitir el mismo nombre en diferentes productos
+    name = Column(String(50), nullable=False)
 
     hex_code = Column(String(7), nullable=False)
+
+    #Relación directa con el producto para que sea privado de ese producto
+    product_id = Column(String(36), nullable=False, index=True)
 
     created_at = Column(
         DateTime,
         default=lambda: datetime.now(timezone.utc)
     )
-
 
 # Tabla talla de un producto
 class Size(Base):

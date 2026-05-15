@@ -12,7 +12,7 @@ from moduls.products.repositories.product_repository import (
     get_products_by_store,
 )
 #Importamos el metodo de seleccion de la tienda
-from moduls.stores.repositories import select_store_by_id
+from moduls.stores.repositories.repositories import select_store_by_id
 #Importamos excepciones
 from core.exceptions import ConflictException, NotFoundException, ForbiddenException, ValidationException
 #Importamos la clase de estado del producto
@@ -96,7 +96,11 @@ def get_products_service(db, skip, limit, gender_category=None):
         product_dict = ProductResponse.model_validate(product).model_dump()
 
         product_dict["store_name"] = product.store.name if product.store else None
-
+        
+        #Imagen del perfil de la tienda
+        product_dict["store_photo_profile"] = (
+            product.store.photo_profile if product.store else None
+        )
         products_with_store.append(product_dict)
 
     return {
@@ -163,9 +167,7 @@ def delete_product_service(db, product_id: str, current_user_id: str):
                     delete_file(variant.image_url)
                 except Exception:
                     pass
-    # --- FIN LÓGICA S3 ---
 
-    return delete_product(db, product)
 
     return delete_product(db, product)
 
@@ -202,6 +204,6 @@ def get_products_by_store_service(db, store_id: str, skip: int = 0, limit: int =
     if not store:
         raise NotFoundException("Boutique introuvable")
         
-#Devolvemos productos activos de la tienda con paginacion y filtro
+    #Devolvemos productos activos de la tienda con paginacion y filtro
     return get_products_by_store(db, store_id, skip=skip, limit=limit, gender_category=gender_category)
 

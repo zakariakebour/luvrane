@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from moduls.stores.schemas import CreateStore, StoreResponse, StoresPageResponse, UpdateStore,StoreImagePresignedRequest,StoreImagePresignedResponse
-from moduls.stores.services import (
+from moduls.stores.services.services import (
     create_store_service,
     get_store_by_id_service,
     get_store_by_name_service,
@@ -52,11 +52,6 @@ def get_my_store(
 def get_store_by_name(name: str, db: Session = Depends(get_db)):
     return get_store_by_name_service(db, name)
 
-#Endpoint para recibir datos de la tienda segun el identificador — publico
-@router.get("/{store_id}", response_model=StoreResponse)
-def get_store_by_id(store_id: str, db: Session = Depends(get_db)):
-    return get_store_by_id_service(db, store_id)
-
 #Endpoint para actualizar tienda — solo el owner
 @router.put("/{store_id}", response_model=StoreResponse)
 def update_store(
@@ -75,3 +70,8 @@ def delete_store(
     current_user: User = Depends(get_current_user)            
 ):
     return delete_store_service(db, store_id, current_user.id)
+
+#Endpoint para recibir datos de la tienda segun el identificador — publico
+@router.get("/{store_id}", response_model=StoreResponse)
+def get_store_by_id(store_id: str, db: Session = Depends(get_db)):
+    return get_store_by_id_service(db, store_id)

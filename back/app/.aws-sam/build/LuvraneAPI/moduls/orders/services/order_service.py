@@ -1,88 +1,151 @@
 from sqlalchemy.orm import Session
-from sqlalchemy.exc import SQLAlchemyError
 from fastapi import BackgroundTasks
+from datetime import datetime, timezone
+from core.order_email_service import send_order_email
 
-# Repositorios de pedidos e items
 from moduls.orders.repositories.order_repository import (
     create_order,
     get_order_by_id,
     get_orders_by_user,
-    get_orders_by_store,
     update_order_status
 )
-from moduls.orders.repositories.order_item_repository import create_order_items_bulk
 
-# Repositorios de productos y variantes
-from moduls.products.repositories.product_repository import get_product_by_id
-from moduls.products.repositories.product_variant import get_product_variant_by_id
+from moduls.orders.repositories.checkout_session_repository import (
+    create_checkout_session
+)
 
-# Repositorios de usuario (Carrito, Direcciones, Tienda)
+from moduls.orders.repositories.order_item_repository import (
+    create_order_items_bulk
+)
+
+from moduls.products.repositories.product_repository import (
+    get_product_by_id
+)
+
+from moduls.products.repositories.product_variant import (
+    get_product_variant_by_id
+)
+
 from moduls.users.repositories.cart_repository import clear_cart
-from moduls.users.repositories.adress_repository import get_direction_by_id
-from moduls.stores.repositories import select_store_by_id
 
-# Excepciones y Estados
+from moduls.users.repositories.address_repository import (
+    get_direction_by_id
+)
+
+from moduls.stores.repositories.repositories import (
+    select_store_by_id
+)
+
+from moduls.users.repositories.user_repository import (
+    get_user_by_id
+)
+
 from core.exceptions import (
     NotFoundException,
     ForbiddenException,
     ValidationException,
     ConflictException
 )
-from moduls.orders.modules import OrderStatus
 
-# --- SERVICIOS PRINCIPALES ---
+from moduls.orders.modules import OrderStatus, Order
 
-def create_order_service(db: Session, user_id: str, order_data, background_tasks: BackgroundTasks):
-    """
-    Crea un pedido, gestiona el stock de forma atómica y vacía el carrito.
-    """
+from datetime import timedelta
+import secrets
+from moduls.stores.repositories.shipping_repository import get_shipping_rate
+
+
+def create_order_service(
+    db: Session,
+    user_id: str,
+    order_data,
+    background_tasks: BackgroundTasks
+):
     try:
-        # 1. Validar dirección
+
+        existing_pending = db.query(Order).filter(
+            Order.user_id == user_id,
+            Order.status == OrderStatus.pending_email_confirmation
+        ).first()
+
+        if existing_pending:
+            raise ConflictException("Une commande en attente de confirmation existe déjà")
+
+        token = secrets.token_urlsafe(32)
+
+        checkout_session = create_checkout_session(db, {
+            "user_id": user_id,
+            "confirmation_token": token,
+            "expires_at": datetime.now(timezone.utc) + timedelta(hours=24)
+        })
+
+        db.flush()
+
         address = get_direction_by_id(db, order_data.address_id)
+
         if not address:
-            raise NotFoundException("Adresse introuvable")
+            raise NotFoundException("L'adresse n'existe pas")
+
         if address.user_id != user_id:
             raise ForbiddenException("Accès interdit à cette adresse")
 
-        # 2. Validar que vengan items en la petición
-        if not order_data.items:
-            raise ValidationException("Le panier est vide")
+        wilaya_id = address.wilaya_id
 
-        items_to_process = []
-        total_price = 0
+        if not address.is_default:
+            raise ValidationException(
+                "Cette adresse n'est pas activé. Veuillez en choisir une autre."
+            )
+        
+        orders_by_store = {}
 
-        # 3. Validar Stock y Precios (Sin guardar nada aún)
         for item in order_data.items:
+
             product = get_product_by_id(db, item.product_id)
+
             if not product or not product.is_active:
-                raise NotFoundException(f"Produit non disponible: {item.product_id}")
+                raise NotFoundException(
+                    f"Producto no disponible: {item.product_id}"
+                )
+
+            store_id = product.store_id
+
+            if store_id not in orders_by_store:
+                orders_by_store[store_id] = {
+                    "items": [],
+                    "total_price": 0
+                }
 
             unit_price = product.price
 
-            # Gestión de Variantes
             if item.variant_id:
-                variant = get_product_variant_by_id(db, item.variant_id)
-                if not variant or variant.product_id != product.id:
-                    raise ValidationException("Variante invalide pour ce produit")
 
-                if variant.stock < item.quantity:
-                    raise ConflictException(f"Stock insuffisant pour la variante du produit {product.name}")
+                variant = get_product_variant_by_id(
+                    db,
+                    item.variant_id
+                )
 
-                # Restamos stock del objeto (SQLAlchemy lo detecta automáticamente)
-                variant.stock -= item.quantity
-                if variant.price:
-                    unit_price = variant.price
+                if not variant or variant.stock < item.quantity:
+                    raise ConflictException(
+                        f"Stock insuffisant en variante de {product.name}"
+                    )
+
+                unit_price = (
+                    variant.price
+                    if variant.price
+                    else unit_price
+                )
+
             else:
-                # Gestión de Producto Simple
+
                 if product.stock < item.quantity:
-                    raise ConflictException(f"Stock insuffisant para el producto {product.name}")
-                
-                product.stock -= item.quantity
+                    raise ConflictException(
+                        f"Stock insuffisant pour {product.name}"
+                    )
 
             item_total = unit_price * item.quantity
-            total_price += item_total
 
-            items_to_process.append({
+            orders_by_store[store_id]["total_price"] += item_total
+
+            orders_by_store[store_id]["items"].append({
                 "product_id": item.product_id,
                 "variant_id": item.variant_id,
                 "quantity": item.quantity,
@@ -90,125 +153,241 @@ def create_order_service(db: Session, user_id: str, order_data, background_tasks
                 "total_price": item_total
             })
 
-        # 4. Crear la cabecera del pedido
-        order_dict = {
-            "user_id": user_id,
-            "address_id": order_data.address_id,
-            "total_price": total_price,
-            "notes": order_data.notes,
-            "status": OrderStatus.pending
-        }
-        order = create_order(db, order_dict)
-        db.flush() # Sincroniza para obtener order.id
+        created_orders = []
 
-        # 5. Crear los items del pedido en bulk
-        for item in items_to_process:
-            item["order_id"] = order.id
-        create_order_items_bulk(db, items_to_process)
+        for store_id, store_data in orders_by_store.items():
 
-        # 6. Limpiar carrito y confirmar transacción
-        clear_cart(db, user_id)
-        
+            shipping_rate = get_shipping_rate(db, store_id, wilaya_id)
+
+            if not shipping_rate:
+                raise ValidationException(
+                    "Cette boutique ne livre pas dans votre wilaya"
+                )
+
+            shipping_cost = shipping_rate.delivery_price
+
+            order = create_order(db, {
+                "user_id": user_id,
+                "address_id": order_data.address_id,
+                "store_id": store_id,
+                "checkout_session_id": checkout_session.id,
+                "total_price": store_data["total_price"] + shipping_cost,
+                "shipping_price": shipping_cost,
+                "notes": order_data.notes,
+                "status": OrderStatus.pending_email_confirmation
+            })
+
+            db.flush()
+
+            items_to_process = []
+
+            for item in store_data["items"]:
+                item["order_id"] = order.id
+                items_to_process.append(item)
+
+            create_order_items_bulk(db, items_to_process)
+
+            created_orders.append(order)
+
         db.commit()
-        db.refresh(order)
 
-        # 7. Tarea de Email en segundo plano (Pendiente de implementar función)
-        # background_tasks.add_task(send_order_confirmation_email, user_id, order.id)
-        return order
+        for order in created_orders:
+            db.refresh(order)
+
+        customer = get_user_by_id(db, user_id)
+
+        background_tasks.add_task(
+            send_order_email,
+            customer.email,
+            "order_received",
+            created_orders,
+            getattr(address, "full_name", None) or "Client",
+            confirmation_token=token
+        )
+
+        for order in created_orders:
+
+            store = select_store_by_id(db, order.store_id)
+
+            owner = get_user_by_id(db, store.owner_id)
+
+            background_tasks.add_task(
+                send_order_email,
+                owner.email,
+                "new_order_admin",
+                order
+            )
+
+        return created_orders
 
     except Exception as e:
         db.rollback()
         raise e
 
-def cancel_order_service(db: Session, order_id: str, user_id: str):
-    """
-    Cancela un pedido y DEVUELVE el stock a los productos/variantes.
-    """
+
+def update_order_status_service(
+    db: Session,
+    order_id: str,
+    new_status: OrderStatus,
+    current_user_id: str,
+    background_tasks: BackgroundTasks,
+    tracking_number: str = None
+):
+
     order = get_order_by_id(db, order_id)
+
     if not order:
-        raise NotFoundException("Commande introuvable")
-    
-    if order.user_id != user_id:
-        raise ForbiddenException("Accès interdit")
+        raise NotFoundException("Pedido no encontrado")
 
-    if order.status not in [OrderStatus.pending, OrderStatus.confirmed]:
-        raise ConflictException("La commande ne puede ser cancelada en su estado actual")
+    store = select_store_by_id(db, order.store_id)
 
-    try:
-        # Devolver stock de cada item
-        for item in order.items:
-            if item.variant_id:
-                variant = get_product_variant_by_id(db, item.variant_id)
-                if variant:
-                    variant.stock += item.quantity
-            else:
-                product = get_product_by_id(db, item.product_id)
-                if product:
-                    product.stock += item.quantity
-        
-        updated_order = update_order_status(db, order, OrderStatus.cancelled)
-        db.commit()
-        return updated_order
-    except Exception as e:
-        db.rollback()
-        raise e
+    if store.owner_id != current_user_id:
+        raise ForbiddenException("No eres el dueño de esta tienda")
 
-#Gestion de estados y listados
+    updated_order = update_order_status(
+        db,
+        order,
+        new_status,
+        tracking_number
+    )
 
-def update_order_status_service(db: Session, order_id: str, status: OrderStatus, current_user_id: str):
-    """
-    Actualiza el estado del pedido validando el rol de owner y las transiciones permitidas.
-    """
-    order = get_order_by_id(db, order_id)
-    if not order or not order.items:
-        raise NotFoundException("Commande introuvable ou vide")
+    db.commit()
 
-    # Validar que el usuario es el dueño de la tienda (del primer producto)
-    first_product = order.items[0].product
-    store = select_store_by_id(db, first_product.store_id)
-    if not store or store.owner_id != current_user_id:
-        raise ForbiddenException("Seul le propriétaire de la boutique peut modifier le statut")
+    customer = get_user_by_id(db, order.user_id)
 
-    if order.status in [OrderStatus.delivered, OrderStatus.cancelled]:
-        raise ConflictException("Impossible de modifier une commande déjà finalisée")
+    address = get_direction_by_id(db, order.address_id)
 
-    # Reglas de transiciones
-    valid_transitions = {
-        OrderStatus.pending:   [OrderStatus.confirmed, OrderStatus.cancelled],
-        OrderStatus.confirmed: [OrderStatus.preparing, OrderStatus.cancelled],
-        OrderStatus.preparing: [OrderStatus.shipped, OrderStatus.cancelled],
-        OrderStatus.shipped:   [OrderStatus.delivered, OrderStatus.returned],
-        OrderStatus.returned:  []
+    background_tasks.add_task(
+        send_order_email,
+        customer.email,
+        f"order_{new_status.value}",
+        updated_order,
+        getattr(address, "full_name", None) or "Client",
+    )
+
+    return updated_order
+
+
+def get_orders_by_user_service(
+    db: Session,
+    user_id: str,
+    skip: int = 0,
+    limit: int = 20
+):
+    orders, total = get_orders_by_user(
+        db,
+        user_id,
+        skip,
+        limit
+    )
+
+    return {
+        "orders": orders,
+        "total": total
     }
 
-    if status not in valid_transitions.get(order.status, []):
-        raise ValidationException(f"Transition de {order.status} vers {status} invalide")
 
-    try:
-        updated_order = update_order_status(db, order, status)
-        db.commit()
-        return updated_order
-    except Exception as e:
-        db.rollback()
-        raise e
+def get_orders_by_store_service(
+    db: Session,
+    store_id: str,
+    user_id: str,
+    skip: int = 0,
+    limit: int = 20
+):
 
-def get_orders_by_user_service(db: Session, user_id: str, skip: int = 0, limit: int = 20):
-    return get_orders_by_user(db, user_id, skip=skip, limit=limit)
+    store = select_store_by_id(db, store_id)
 
-# Metodo para obtener pedido por identificador (el que llama el Router)
-def get_order_by_store_service(db: Session, order_id: str, user_id: str):
-    """
-    Busca un pedido por ID y verifica que pertenezca al usuario que lo solicita.
-    """
-    # 1. Buscamos el pedido en el repositorio
+    if not store or store.owner_id != user_id:
+        raise ForbiddenException(
+            "Accès interdit a cette boutique"
+        )
+
+    from moduls.orders.repositories.order_repository import get_orders_by_store
+
+    orders, total = get_orders_by_store(
+        db,
+        store_id,
+        skip,
+        limit
+    )
+
+    return {
+        "orders": orders,
+        "total": total
+    }
+
+
+def get_order_by_id_service(
+    db: Session,
+    order_id: str,
+    user_id: str
+):
+
     order = get_order_by_id(db, order_id)
-    
-    # 2. Si no existe, lanzamos 404
-    if not order:
-        raise NotFoundException("Commande introuvable")
 
-    # 3. Comprobamos que el pedido pertenece al usuario (Seguridad)
+    if not order:
+        raise NotFoundException("Commande non trouvée")
+
+    store = select_store_by_id(db, order.store_id)
+
+    if order.user_id != user_id and store.owner_id != user_id:
+        raise ForbiddenException(
+            "Pas d'autorisation pour voir cette commande"
+        )
+
+    return order
+
+
+def cancel_order_service(
+    db: Session,
+    order_id: str,
+    user_id: str,
+    background_tasks: BackgroundTasks
+):
+
+    order = get_order_by_id(db, order_id)
+
+    if not order:
+        raise NotFoundException("Commande non trouvée")
+
+    if order.status not in {OrderStatus.pending, OrderStatus.pending_email_confirmation}:
+        raise ValidationException(
+            "La commande ne peut plus être annulée"
+        )
+
     if order.user_id != user_id:
-        raise ForbiddenException("Vous n'avez no tiene permiso para ver este pedido")
+        raise ForbiddenException("Accès refusé")
+
+    order.status = OrderStatus.cancelled
+
+    for item in order.items:
+
+        product = get_product_by_id(db, item.product_id)
+
+        if item.variant_id:
+
+            variant = get_product_variant_by_id(
+                db,
+                item.variant_id
+            )
+
+            variant.stock += item.quantity
+
+        else:
+            product.stock += item.quantity
+
+    db.commit()
+
+    customer = get_user_by_id(db, order.user_id)
+
+    address = get_direction_by_id(db, order.address_id)
+
+    background_tasks.add_task(
+        send_order_email,
+        customer.email,
+        "order_cancelled",
+        order,
+        getattr(address, "full_name", None) or "Client",
+    )
 
     return order

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Text, Boolean, DateTime
+from sqlalchemy import Column, String, Text, Boolean, DateTime,Integer,Numeric
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import relationship, foreign
 from core.database import Base
@@ -64,6 +64,9 @@ class Store(Base):
         viewonly=True
     )
 
+    #Columna para guardar empresa logistica
+    logistics_partner = Column(String(50), nullable=True)
+    
     #Fecha de creacion de la tienda
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
@@ -74,4 +77,21 @@ class Store(Base):
     deleted_at = Column(DateTime, nullable=True)
 
     #Columna para eliminar la tienda pero no de la base de datos completamente y poder recuperarla
+    is_active = Column(Boolean, default=True)
+
+class ShippingRate(Base):
+    __tablename__ = "shipping_rates"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    store_id = Column(String(36), index=True, nullable=False) # Relación lógica con Store
+    
+    # Datos de la Wilaya
+    wilaya_id = Column(Integer, nullable=False) # Código 1-58
+    wilaya_name = Column(String(50), nullable=False)
+    
+    # Tarifas
+    delivery_price = Column(Numeric(10, 2), nullable=False) # A domicilio
+    office_price = Column(Numeric(10, 2), nullable=True)    # En oficina de correos
+    return_price = Column(Numeric(10, 2), nullable=True) 
+    estimated_days = Column(Integer, default=3)
     is_active = Column(Boolean, default=True)

@@ -22,6 +22,7 @@ def get_cart(db: Session, user_id: str) -> list:
     return (
         db.query(CartItem)
         .join(Product, Product.id == CartItem.product_id)
+        .join(ProductVariant, ProductVariant.id == CartItem.variant_id)
         .options(
             joinedload(CartItem.product).joinedload(Product.images),
             joinedload(CartItem.variant)

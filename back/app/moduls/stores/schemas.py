@@ -1,9 +1,10 @@
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator,ConfigDict
 from typing import Optional, List
 from datetime import datetime
 from moduls.products.schemas import ProductResponse
 # Importamos el Enum para asegurar compatibilidad con el modelo de SQLAlchemy
 from moduls.stores.modules import StoreCategory 
+from decimal import Decimal
 
 #Clase completa para validacion de entrada y salida de los datos para la creacion de la tienda
 class CreateStore(BaseModel):
@@ -45,7 +46,7 @@ class StoreResponse(BaseModel):
     type: str
     is_active: bool
     created_at: Optional[datetime] = None
-
+    logistics_partner: Optional[str] = None
     class Config:
         from_attributes = True
 
@@ -98,17 +99,22 @@ class StoreImagePresignedResponse(BaseModel):
     image_type: str
     media_type: str
 
-# Esquema para una tarifa individual (lo que guardamos)
+# Esquema para una tarifa individual
 class ShippingRateBase(BaseModel):
     wilaya_id: int = Field(..., ge=1, le=58)
     wilaya_name: str
-    delivery_price: Decimal
-    office_price: Optional[Decimal] = None
+
+    delivery_price: Decimal = Field(..., ge=0)
+    office_price: Optional[Decimal] = Field(None, ge=0)
+    return_price: Optional[Decimal] = Field(None, ge=0)
+
     estimated_days: int = 3
+
 
 # Para crear o actualizar una tarifa
 class ShippingRateCreate(ShippingRateBase):
     pass
+
 
 # Respuesta que daremos al Frontend
 class ShippingRateResponse(ShippingRateBase):
@@ -116,10 +122,10 @@ class ShippingRateResponse(ShippingRateBase):
     store_id: str
     is_active: bool
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
-# Esquema para actualización masiva (muy útil para el Front)
+
+# Esquema para actualización masiva
 class BulkShippingUpdate(BaseModel):
     logistics_partner: str
     rates: List[ShippingRateCreate]

@@ -1,5 +1,5 @@
 #Importamos los metodos del repositorio
-from moduls.users.repositories.adress_repository import (
+from moduls.users.repositories.address_repository import (
     create_directions,
     delete_direction,
     get_directions,

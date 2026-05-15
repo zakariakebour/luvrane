@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Text, Boolean, DateTime
+from sqlalchemy import Column, String, Text, Boolean, DateTime,Integer,Numeric
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import relationship, foreign
 from core.database import Base
@@ -92,6 +92,6 @@ class ShippingRate(Base):
     # Tarifas
     delivery_price = Column(Numeric(10, 2), nullable=False) # A domicilio
     office_price = Column(Numeric(10, 2), nullable=True)    # En oficina de correos
-    
+    return_price = Column(Numeric(10, 2), nullable=True) 
     estimated_days = Column(Integer, default=3)
     is_active = Column(Boolean, default=True)

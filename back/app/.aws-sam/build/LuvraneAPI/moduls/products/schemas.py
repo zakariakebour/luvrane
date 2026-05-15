@@ -47,11 +47,11 @@ class ColorBase(BaseModel):
         return value
 
 class ColorCreate(ColorBase):
-    pass
+    product_id: str
 
 class ColorResponse(ColorBase):
     id: str
-
+    product_id: str
     class Config:
         from_attributes = True
 
@@ -198,14 +198,19 @@ class ProductUpdate(BaseModel):
 class ProductResponse(ProductBase):
     id: str
     store_id: str
-    # Media del producto principal
+
+    #
+    store_name: Optional[str] = None
+    store_photo_profile: Optional[str] = None
+
+    # MEDIA PRODUCTO
     images: List[ProductImageResponse] = []
-    # Variantes del producto
     variants: List[ProductVariantResponse] = []
+
     is_active: bool
     status: str
     created_at: Optional[datetime] = None
-    store_name: Optional[str] = None
+
     class Config:
         from_attributes = True
 

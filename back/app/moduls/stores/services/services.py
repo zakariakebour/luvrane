@@ -1,4 +1,4 @@
-from moduls.stores.repositories import (
+from moduls.stores.repositories.repositories import (
     create_store,
     select_store_by_id,
     select_stores,

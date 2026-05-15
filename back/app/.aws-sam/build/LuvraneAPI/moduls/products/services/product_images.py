@@ -11,7 +11,7 @@ from moduls.products.repositories.product_repository import get_product_by_id
 #Importamos excepciones
 from core.exceptions import NotFoundException, ForbiddenException, ValidationException
 #Importamos metodo para seleccionar tienda desde el repositorio de tienda
-from moduls.stores.repositories import select_store_by_id
+from moduls.stores.repositories.repositories import select_store_by_id
 #Importamos metodo para eliminar archivo de S3
 from core.s3 import delete_file
 

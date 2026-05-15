@@ -9,17 +9,18 @@ from mangum import Mangum
 from moduls.users.api import user_router, address_router, likes_router, cart_router
 #Importamos routers de tiendas
 from moduls.stores.api.api import router as store_router
+from moduls.stores.api.store_logist_api import router as store_logist_router
 #Importamos routers de productos
 from moduls.products.api.product_route import router as product_router
 from moduls.products.api.product_image import router as product_image_router
 from moduls.products.api.product_variant import router as product_variant_router
 #Importamos los endpoints de gestion de pedidos
 from moduls.orders.api.order_api import router as order_router
-#Para registro ORM en lambda
-from moduls.users.modules import *
-from moduls.stores.modules import *
-from moduls.products.modules import *
-from moduls.orders.modules import *
+#Para registro ORM en lambda — orden importa para evitar circular imports
+from moduls.users.modules import User, UserAddress, CartItem, ProductLike
+from moduls.products.modules import Product, ProductVariant, ProductImage
+from moduls.stores.modules import Store, ShippingRate
+from moduls.orders.modules import Order, OrderItem, CheckoutSession, OrderStatus
 
 #Creamos la aplicacion
 app = FastAPI(
@@ -54,10 +55,11 @@ app.include_router(address_router, prefix="/api/v1/users/addresses")
 app.include_router(likes_router, prefix="/api/v1/users/likes")
 app.include_router(cart_router, prefix="/api/v1/users/cart")
 app.include_router(store_router, prefix="/api/v1/stores")
+app.include_router(store_logist_router, prefix="/api/v1/stores")
 app.include_router(product_router, prefix="/api/v1/products")        
 app.include_router(product_image_router, prefix="/api/v1/products/images")  
 app.include_router(product_variant_router, prefix="/api/v1/products/variants")
-app.include_router(order_router,prefix="/api/v1/orders")
+app.include_router(order_router, prefix="/api/v1")
 
 #Endpoint de salud para verificar que la API esta funcionando
 @app.get("/health")

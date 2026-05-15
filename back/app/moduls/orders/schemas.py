@@ -13,7 +13,8 @@ class OrderStatusSchema(str, Enum):
     delivered = "delivered"
     cancelled = "cancelled"
     returned = "returned"
-
+    pending_email_confirmation = "pending_email_confirmation"
+    
 class OrderItemCreate(BaseModel):
     product_id: str
     variant_id: Optional[str] = None
@@ -50,6 +51,7 @@ class OrderResponse(BaseModel):
     address_id: str
     status: OrderStatusSchema
     total_price: Decimal
+    shipping_price: Decimal = Decimal("0.00")  # ← coste de envío por wilaya
     tracking_number: Optional[str] = None
     notes: Optional[str] = None
     items: List[OrderItemResponse] = []

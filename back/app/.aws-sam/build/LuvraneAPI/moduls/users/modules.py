@@ -108,6 +108,7 @@ class UserAddress(Base):
 
     #Columna numero de telefono
     phone = Column(String(20), nullable=True)
+
     # Calle y numero
     street = Column(String(255), nullable=False)
 
@@ -115,7 +116,7 @@ class UserAddress(Base):
     city = Column(String(100), nullable=False)
 
     # Wilaya (region)
-    wilaya = Column(String(100), nullable=False)
+    wilaya_id = Column(Integer, nullable=False)
 
     # Codigo postal
     postal_code = Column(String(20), nullable=True)

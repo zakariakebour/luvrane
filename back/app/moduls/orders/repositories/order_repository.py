@@ -20,7 +20,7 @@ def get_orders_by_user(db: Session, user_id: str, skip: int = 0, limit: int = 20
     
     return {"total": total, "orders": orders}
 
-# Metodo para listar pedidos de una tienda (OPTIMIZADO)
+# Metodo para listar pedidos de una tienda
 def get_orders_by_store(db: Session, store_id: str, skip: int = 0, limit: int = 20) -> dict:
     # Filtro directo por store_id, mucho más rápido que los joins anteriores
     query = db.query(Order).filter(Order.store_id == store_id)
@@ -53,3 +53,8 @@ def update_order_status(db: Session, order: Order, status: OrderStatus, tracking
 
     # El commit lo hará el Service tras disparar SES o gestionar stock
     return order
+
+def get_orders_by_checkout_session(db: Session, session_id: str):
+    return db.query(Order).filter(
+        Order.checkout_session_id == session_id
+    ).all()

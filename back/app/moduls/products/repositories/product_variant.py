@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from moduls.products.modules import ProductVariant, VariantMedia, Color, Size
-
+from core.exceptions import ConflictException
 #Metodo para añdir variante
 def add_product_variant(db: Session, product_id: str, variant_data: dict) -> ProductVariant:
     variant = ProductVariant(
@@ -97,6 +97,15 @@ def count_variant_media(db: Session, variant_id: str) -> int:
 
 #Metodo de creacion de color
 def create_color(db: Session, color_data: dict) -> Color:
+    # Ahora buscamos si el color ya existe asignado a ESTE producto específico
+    existing = db.query(Color).filter(
+        Color.name == color_data.get("name"),
+        Color.product_id == color_data.get("product_id") 
+    ).first()
+
+    if existing:
+        raise ConflictException("Cette couleur existe déjà pour ce produit")
+
     color = Color(**color_data)
     db.add(color)
     db.commit()

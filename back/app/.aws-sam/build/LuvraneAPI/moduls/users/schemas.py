@@ -15,7 +15,7 @@ class AddressCreate(BaseModel):
     full_name: str = Field(..., min_length=2, max_length=255)
     street: str = Field(..., min_length=2, max_length=255)
     city: str = Field(..., min_length=2, max_length=100)
-    wilaya: str = Field(..., min_length=2, max_length=100)
+    wilaya_id: int
     postal_code: Optional[str] = Field(None, max_length=20)
     is_default: bool = False
     phone: str = Field(..., min_length=8, max_length=20)
@@ -26,7 +26,7 @@ class AddressResponse(BaseModel):
     full_name: Optional[str] = None
     street: str
     city: str
-    wilaya: str
+    wilaya_id: int
     postal_code: Optional[str] = None
     is_default: bool
     created_at: Optional[datetime] = None
@@ -129,7 +129,7 @@ class UserResponse(BaseModel):
 class UserUpdate(BaseModel):
     username: Optional[str] = Field(None, min_length=2, max_length=50)
     email: Optional[EmailStr] = None
-    wilaya: Optional[str] = Field(None, min_length=2, max_length=100)
+    wilaya_id: Optional[int] = Field(None, min_length=2, max_length=100)
 
     @field_validator("username")
     @classmethod
