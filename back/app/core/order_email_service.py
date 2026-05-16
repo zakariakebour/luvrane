@@ -14,18 +14,21 @@ def get_html_template(
     Retornamos el cuerpo de correo
     """
 
-    # Si es una lista de órdenes (como en checkout_service), extraemos la primera para el template
-    if isinstance(order, list):
-        if len(order) > 0:
-            order = order[0]
-        else:
-            raise ValueError("La liste d'ordres est vide")
+    # Convertimos a lista para manejar el bucle uniformemente en el HTML
+    orders_list = order if isinstance(order, list) else [order]
+    
+    if len(orders_list) > 0:
+        display_id = orders_list[0].id
+        total_global = sum(o.total_price for o in orders_list)
+        main_order = orders_list[0]
+    else:
+        raise ValueError("La liste d'ordres est vide")
 
     #Color
     brand_color = "#000000"
 
     subjects = {
-        "order_received": f"Confirmez votre commande #{order.id[:8]} - Luvrane",
+        "order_received": f"Confirmez votre commande #{display_id[:8]} - Luvrane",
         "order_confirmed": "Bonne nouvelle ! Votre commande a été confirmée",
         "order_shipped": "Votre colis est en route !",
         "order_cancelled": "Mise à jour : Commande annulée",
@@ -78,8 +81,8 @@ def get_html_template(
         Numéro de suivi :
         <b>
             {
-                order.tracking_number
-                if order.tracking_number
+                main_order.tracking_number
+                if main_order.tracking_number
                 else 'Disponible prochainement'
             }
         </b>
@@ -110,7 +113,76 @@ def get_html_template(
 
         message = f"""
         Le statut de votre commande
-        #{order.id[:8]} a été mis à jour.
+        #{display_id[:8]} a été mis à jour.
+        """
+
+    # GENERAMOS EL DESGLOSE DINÁMICO DE TIENDAS Y PRODUCTOS EN HTML
+    orders_html_details = ""
+    for index, o in enumerate(orders_list, 1):
+        orders_html_details += f"""
+        <div style="border-bottom: 1px dashed #eee; padding-bottom: 15px; margin-bottom: 15px;">
+            <p style="margin: 0 0 10px 0; font-size: 14px; color: #555; font-weight: bold;">
+                Colis {index} - Magasin #{str(o.store_id)[:8]}
+            </p>
+        """
+        
+        # Iteramos por las relaciones de tu base de datos (Order.items)
+        for item in o.items:
+            img_url = None
+            
+            # 1. Intentamos extraer la primera imagen de la variante (tabla variant_media)
+            if item.variant and item.variant.images:
+                # Buscamos la imagen en la posición 0 u ordenadas por el atributo 'position'
+                sorted_variant_imgs = sorted(item.variant.images, key=lambda x: x.position or 0)
+                if sorted_variant_imgs:
+                    img_url = sorted_variant_imgs[0].media_url
+            
+            # 2. Si no hay imagen de variante, buscamos la primera imagen del producto principal (tabla product_images)
+            if not img_url and item.product and item.product.images:
+                sorted_product_imgs = sorted(item.product.images, key=lambda x: x.position or 0)
+                if sorted_product_imgs:
+                    img_url = sorted_product_imgs[0].image_url
+            
+            # 3. Fallback: Si no hay multimedia asociada, colocamos un marcador de posición
+            if not img_url:
+                img_url = "https://luvrane.com/placeholder.png"
+
+            # 4. Construcción dinámica del nombre con sus atributos físicos (Color y Talla)
+            p_name = getattr(item.product, "name", "Produit")
+            variant_details = []
+            
+            if item.variant:
+                if item.variant.color and getattr(item.variant.color, "name", None):
+                    variant_details.append(f"Couleur: {item.variant.color.name}")
+                if item.variant.size and getattr(item.variant.size, "name", None):
+                    variant_details.append(f"Taille: {item.variant.size.name}")
+            
+            if variant_details:
+                p_name += f" ({', '.join(variant_details)})"
+            
+            orders_html_details += f"""
+            <table style="width: 100%; margin-bottom: 10px;">
+                <tr>
+                    <td style="width: 60px; vertical-align: middle;">
+                        <img src="{img_url}" alt="{p_name}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px; border: 1px solid #eee;">
+                    </td>
+                    <td style="vertical-align: middle; padding-left: 10px;">
+                        <p style="margin: 0; font-size: 14px; font-weight: bold; color: #333;">{p_name}</p>
+                        <p style="margin: 0; font-size: 12px; color: #777;">Qté: {item.quantity} x {item.unit_price} DA</p>
+                    </td>
+                    <td style="vertical-align: middle; text-align: right; font-size: 14px; font-weight: bold; color: #333;">
+                        {item.total_price} DA
+                    </td>
+                </tr>
+            </table>
+            """
+            
+        # Obtenemos la columna shipping_price definida en tu modelo de Order
+        orders_html_details += f"""
+            <div style="text-align: right; font-size: 13px; color: #666; margin-top: 5px;">
+                Frais de livraison de ce magasin: <b>{o.shipping_price} DA</b>
+            </div>
+        </div>
         """
 
     html_content = f"""
@@ -166,18 +238,20 @@ def get_html_template(
                 margin-top: 20px;
             ">
 
-                <p>
-                    <b>Résumé de la commande :</b>
+                <p style="margin-top: 0;">
+                    <b>Détails de la commande :</b>
                 </p>
 
-                <p>
-                    ID : #{order.id[:8]}
-                </p>
+                {orders_html_details}
 
-                <p>
-                    Total :
-                    <b>{order.total_price} DA</b>
-                </p>
+                <table style="width: 100%; margin-top: 15px; border-top: 1px solid #ddd; padding-top: 10px;">
+                    <tr>
+                        <td style="font-size: 16px; font-weight: bold; color: #333;">Montant Total Global :</td>
+                        <td style="text-align: right; font-size: 18px; font-weight: bold; color: {brand_color};">
+                            {total_global} DA
+                        </td>
+                    </tr>
+                </table>
 
             </div>
 
@@ -253,7 +327,6 @@ def send_order_email(
             confirmation_token
         )
 
-        # Ajustamos también el texto plano por si viene una lista de órdenes
         clean_order = order[0] if isinstance(order, list) else order
 
         SES_CLIENT.send_email(

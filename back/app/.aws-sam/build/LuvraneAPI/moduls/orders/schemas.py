@@ -14,6 +14,60 @@ class OrderStatusSchema(str, Enum):
     cancelled = "cancelled"
     returned = "returned"
     pending_email_confirmation = "pending_email_confirmation"
+
+# Schemas de soporte para la multimedia y detalles de productos/variantes ---
+
+class ProductImageSummary(BaseModel):
+    image_url: str
+    media_type: str
+    position: int
+
+    class Config:
+        from_attributes = True
+
+class VariantMediaSummary(BaseModel):
+    media_url: str
+    media_type: str
+    position: int
+
+    class Config:
+        from_attributes = True
+
+class ColorSummary(BaseModel):
+    name: str
+    hex_code: str
+
+    class Config:
+        from_attributes = True
+
+class SizeSummary(BaseModel):
+    name: str
+
+    class Config:
+        from_attributes = True
+
+class ProductSummaryResponse(BaseModel):
+    id: str
+    name: str
+    description: Optional[str] = None
+    images: List[ProductImageSummary] = []
+
+    class Config:
+        from_attributes = True
+
+class VariantSummaryResponse(BaseModel):
+    id: str
+    sku: str
+    price: Optional[Decimal] = None
+    stock: int
+    color: Optional[ColorSummary] = None
+    size: Optional[SizeSummary] = None
+    images: List[VariantMediaSummary] = []
+
+    class Config:
+        from_attributes = True
+
+# --- Fin de schemas de soporte ---
     
 class OrderItemCreate(BaseModel):
     product_id: str
@@ -27,6 +81,10 @@ class OrderItemResponse(BaseModel):
     quantity: int
     unit_price: Decimal
     total_price: Decimal
+    
+    # Nuevos campos para los detalles y la multimedia
+    product: Optional[ProductSummaryResponse] = None
+    variant: Optional[VariantSummaryResponse] = None
 
     class Config:
         from_attributes = True
@@ -77,6 +135,3 @@ class OrdersPageResponse(BaseModel):
     orders: List[OrderResponse]
     skip: int
     limit: int
-
-    class Config:
-        from_attributes = True

@@ -1,6 +1,7 @@
-from sqlalchemy.orm import Session
-from moduls.orders.modules import Order, OrderStatus 
+from sqlalchemy.orm import Session, joinedload
+from moduls.orders.modules import Order, OrderItem, OrderStatus  # <-- Añadido OrderItem aquí
 from datetime import datetime, timezone
+from moduls.products.modules import Product, ProductVariant
 
 # Metodo para crear pedido
 def create_order(db: Session, order_data: dict) -> Order:
@@ -10,13 +11,53 @@ def create_order(db: Session, order_data: dict) -> Order:
 
 # Metodo para obtener pedido por identificador
 def get_order_by_id(db: Session, order_id: str) -> Order:
-    return db.query(Order).filter(Order.id == order_id).first()
+    return (
+        db.query(Order)
+        .options(
+            # Cargar los items -> producto -> sus imágenes base
+            joinedload(Order.items)
+            .joinedload(OrderItem.product)
+            .joinedload(Product.images),
+            
+            # Cargar las variantes de los items con su multimedia, color y talla
+            joinedload(Order.items)
+            .joinedload(OrderItem.variant)
+            .options(
+                joinedload(ProductVariant.images),
+                joinedload(ProductVariant.color),
+                joinedload(ProductVariant.size)
+            )
+        )
+        .filter(Order.id == order_id)
+        .first()
+    )
 
 # Metodo para listar pedidos del usuario con paginacion
 def get_orders_by_user(db: Session, user_id: str, skip: int = 0, limit: int = 20) -> dict:
     query = db.query(Order).filter(Order.user_id == user_id)
     total = query.count()
-    orders = query.order_by(Order.created_at.desc()).offset(skip).limit(limit).all()
+    
+    orders = (
+        query.options(
+            # Cargar los items -> producto -> sus imágenes base
+            joinedload(Order.items)
+            .joinedload(OrderItem.product)
+            .joinedload(Product.images),
+            
+            # Cargar las variantes de los items con su multimedia, color y talla
+            joinedload(Order.items)
+            .joinedload(OrderItem.variant)
+            .options(
+                joinedload(ProductVariant.images),
+                joinedload(ProductVariant.color),
+                joinedload(ProductVariant.size)
+            )
+        )
+        .order_by(Order.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
     
     return {"total": total, "orders": orders}
 
@@ -26,7 +67,28 @@ def get_orders_by_store(db: Session, store_id: str, skip: int = 0, limit: int = 
     query = db.query(Order).filter(Order.store_id == store_id)
     
     total = query.count()
-    orders = query.order_by(Order.created_at.desc()).offset(skip).limit(limit).all()
+    
+    orders = (
+        query.options(
+            # Cargar los items -> producto -> sus imágenes base
+            joinedload(Order.items)
+            .joinedload(OrderItem.product)
+            .joinedload(Product.images),
+            
+            # Cargar las variantes de los items con su multimedia, color y talla
+            joinedload(Order.items)
+            .joinedload(OrderItem.variant)
+            .options(
+                joinedload(ProductVariant.images),
+                joinedload(ProductVariant.color),
+                joinedload(ProductVariant.size)
+            )
+        )
+        .order_by(Order.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
 
     return {"total": total, "orders": orders}
 

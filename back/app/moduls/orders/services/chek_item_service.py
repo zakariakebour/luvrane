@@ -20,7 +20,12 @@ def confirm_checkout_service(db: Session, token: str, background_tasks: Backgrou
         if not session:
             raise NotFoundException("Session de commande introuvable")
 
-        if session.expires_at < datetime.now(timezone.utc):
+        #Tiempo de comparacion
+        expires_at = session.expires_at
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+
+        if expires_at < datetime.now(timezone.utc):
             raise ValidationException("Le lien de confirmation a expiré")
 
         if session.is_confirmed:
