@@ -102,7 +102,12 @@ class UserAddress(Base):
         back_populates="addresses",
         viewonly=True
     )
-
+    wilaya = relationship(
+        "Wilaya",
+        primaryjoin="foreign(UserAddress.wilaya_id) == Wilaya.id",
+        viewonly=True
+    )
+    
     #Columna nombre completo
     full_name = Column(String(255), nullable=False)
 
@@ -199,6 +204,8 @@ class ProductLike(Base):
     # Fecha en que se dio like
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
-class GoogleCodeData(BaseModel):
-    code: str
-    role: Optional[UserRole] = None
+class Wilaya(Base):
+    __tablename__ = "wilayas"
+
+    id = Column(Integer, primary_key=True, index=True) 
+    name = Column(String(100), nullable=False)

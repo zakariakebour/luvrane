@@ -1,7 +1,8 @@
 from sqlalchemy.orm import Session, joinedload
-from moduls.orders.modules import Order, OrderItem, OrderStatus  # <-- Añadido OrderItem aquí
+from moduls.orders.modules import Order, OrderItem, OrderStatus
 from datetime import datetime, timezone
 from moduls.products.modules import Product, ProductVariant
+from moduls.users.modules import UserAddress
 
 # Metodo para crear pedido
 def create_order(db: Session, order_data: dict) -> Order:
@@ -14,18 +15,15 @@ def get_order_by_id(db: Session, order_id: str) -> Order:
     return (
         db.query(Order)
         .options(
-            # Cargar los items -> producto -> sus imágenes base
-            joinedload(Order.items)
-            .joinedload(OrderItem.product)
-            .joinedload(Product.images),
-            
-            # Cargar las variantes de los items con su multimedia, color y talla
-            joinedload(Order.items)
-            .joinedload(OrderItem.variant)
-            .options(
-                joinedload(ProductVariant.images),
-                joinedload(ProductVariant.color),
-                joinedload(ProductVariant.size)
+            joinedload(Order.address_rel).joinedload(UserAddress.wilaya),
+            # Quitamos el joinedload de address porque ahora es una @property dinámica
+            joinedload(Order.items).options(
+                joinedload(OrderItem.product).joinedload(Product.images),
+                joinedload(OrderItem.variant).options(
+                    joinedload(ProductVariant.images),
+                    joinedload(ProductVariant.color),
+                    joinedload(ProductVariant.size)
+                )
             )
         )
         .filter(Order.id == order_id)
@@ -39,18 +37,15 @@ def get_orders_by_user(db: Session, user_id: str, skip: int = 0, limit: int = 20
     
     orders = (
         query.options(
-            # Cargar los items -> producto -> sus imágenes base
-            joinedload(Order.items)
-            .joinedload(OrderItem.product)
-            .joinedload(Product.images),
-            
-            # Cargar las variantes de los items con su multimedia, color y talla
-            joinedload(Order.items)
-            .joinedload(OrderItem.variant)
-            .options(
-                joinedload(ProductVariant.images),
-                joinedload(ProductVariant.color),
-                joinedload(ProductVariant.size)
+            joinedload(Order.address_rel).joinedload(UserAddress.wilaya),
+            # Quitamos el joinedload de address aquí también
+            joinedload(Order.items).options(
+                joinedload(OrderItem.product).joinedload(Product.images),
+                joinedload(OrderItem.variant).options(
+                    joinedload(ProductVariant.images),
+                    joinedload(ProductVariant.color),
+                    joinedload(ProductVariant.size)
+                )
             )
         )
         .order_by(Order.created_at.desc())
@@ -63,25 +58,20 @@ def get_orders_by_user(db: Session, user_id: str, skip: int = 0, limit: int = 20
 
 # Metodo para listar pedidos de una tienda
 def get_orders_by_store(db: Session, store_id: str, skip: int = 0, limit: int = 20) -> dict:
-    # Filtro directo por store_id, mucho más rápido que los joins anteriores
     query = db.query(Order).filter(Order.store_id == store_id)
-    
     total = query.count()
     
     orders = (
         query.options(
-            # Cargar los items -> producto -> sus imágenes base
-            joinedload(Order.items)
-            .joinedload(OrderItem.product)
-            .joinedload(Product.images),
-            
-            # Cargar las variantes de los items con su multimedia, color y talla
-            joinedload(Order.items)
-            .joinedload(OrderItem.variant)
-            .options(
-                joinedload(ProductVariant.images),
-                joinedload(ProductVariant.color),
-                joinedload(ProductVariant.size)
+            joinedload(Order.address_rel).joinedload(UserAddress.wilaya),
+            # Quitamos el joinedload de address aquí también
+            joinedload(Order.items).options(
+                joinedload(OrderItem.product).joinedload(Product.images),
+                joinedload(OrderItem.variant).options(
+                    joinedload(ProductVariant.images),
+                    joinedload(ProductVariant.color),
+                    joinedload(ProductVariant.size)
+                )
             )
         )
         .order_by(Order.created_at.desc())
@@ -95,25 +85,19 @@ def get_orders_by_store(db: Session, store_id: str, skip: int = 0, limit: int = 
 # Metodo para actualizar estado del pedido con hitos temporales
 def update_order_status(db: Session, order: Order, status: OrderStatus, tracking_number: str = None) -> Order:
     order.status = status
-    
-    # Actualización de hitos para los correos de SES
     now = datetime.now(timezone.utc)
     
-    if status == OrderStatus.confirmed:
+    if status.value == OrderStatus.confirmed.value:
         order.confirmed_at = now
-        
-    elif status == OrderStatus.shipped:
+    elif status.value == OrderStatus.shipped.value:
         order.shipped_at = now
         if tracking_number:
             order.tracking_number = tracking_number
-            
-    elif status == OrderStatus.delivered:
+    elif status.value == OrderStatus.delivered.value:
         order.delivered_at = now
-        
-    elif status == OrderStatus.cancelled:
+    elif status.value == OrderStatus.cancelled.value:
         order.cancelled_at = now
 
-    # El commit lo hará el Service tras disparar SES o gestionar stock
     return order
 
 def get_orders_by_checkout_session(db: Session, session_id: str):

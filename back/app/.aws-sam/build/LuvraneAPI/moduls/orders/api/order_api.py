@@ -52,7 +52,8 @@ def create_order(
         db,
         current_user.id,
         order_data,
-        background_tasks
+        background_tasks,
+        current_user=current_user
     )
 
 #Para confirmar correo

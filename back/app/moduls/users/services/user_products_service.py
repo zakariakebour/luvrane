@@ -8,18 +8,28 @@ from moduls.users.repositories.cart_repository import (
     clear_cart,
     get_cart_item_by_id
 )
+
 #Importamos repositorio de productos para validar que existe
 from moduls.products.repositories import get_product_by_id, get_product_variant_by_id
 #Importamos excepciones
 from core.exceptions import NotFoundException, ConflictException, ForbiddenException
 from moduls.users.schemas import CartItemResponse
+from moduls.stores.repositories.repositories import select_store_by_id
 
 #Metodo para añadir producto al carrito
-def add_item_service(db, user_id: str, product_id: str, variant_id: str = None, quantity: int = 1):
+def add_item_service(db, user_id: str, product_id: str, variant_id: str = None, quantity: int = 1 ,current_user = None):
     #Comprobamos que el producto existe y esta activo
     product = get_product_by_id(db, product_id)
     if not product or not product.is_active:
         raise NotFoundException("Produit introuvable o désactivé")
+
+    #Evitar que el dueño añada sus propios productos al carrito
+    if current_user:
+        store = select_store_by_id(db, product.store_id)
+        if store and store.owner_id == str(current_user.id):
+            raise ForbiddenException(
+                "Vous ne pouvez pas ajouter les produits de votre propre magasin au panier."
+            )
 
     # Si no viene variant_id, debemos buscar la variante 'DEFAULT' porque ahi es donde vive el stock
     target_variant = None

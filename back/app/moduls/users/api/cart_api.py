@@ -29,12 +29,14 @@ def add_item(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    # Pasamos TODOS los parámetros nombrados para garantizar que Python no los mueva de lugar
     return add_item_service(
-        db,
-        current_user.id,
-        item_data.product_id,
-        item_data.variant_id,
-        item_data.quantity
+        db=db,
+        user_id=current_user.id,
+        product_id=item_data.product_id,
+        variant_id=item_data.variant_id,
+        quantity=item_data.quantity,
+        current_user=current_user
     )
 
 #Endpoint para obtener carrito del usuario — protegido

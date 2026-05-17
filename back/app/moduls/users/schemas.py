@@ -9,7 +9,15 @@ class UserRole(str, Enum):
     customer = "customer"
 
 #Direccion
+#Respuesta para nombre de wilaya
+# Schema secundario para estructurar la wilaya dentro de la dirección
+class WilayaResponse(BaseModel):
+    id: int
+    name: str
 
+    class Config:
+        from_attributes = True
+        
 # Schema de entrada para crear direccion
 class AddressCreate(BaseModel):
     full_name: str = Field(..., min_length=2, max_length=255)
@@ -19,22 +27,24 @@ class AddressCreate(BaseModel):
     postal_code: Optional[str] = Field(None, max_length=20)
     is_default: bool = False
     phone: str = Field(..., min_length=8, max_length=20)
-       
+
 # Schema de respuesta de direccion
 class AddressResponse(BaseModel):
     id: str
     full_name: Optional[str] = None
     street: str
     city: str
-    wilaya_id: int
     postal_code: Optional[str] = None
     is_default: bool
     created_at: Optional[datetime] = None
     phone: Optional[str] = None
+    
+    # AQUÍ ES DONDE DEBE SER OPCIONAL:
+    wilaya: Optional[WilayaResponse] = None 
+    
     class Config:
         from_attributes = True
 
-# Carrito
 
 # Schema de entrada para añadir producto al carrito
 class CartItemCreate(BaseModel):

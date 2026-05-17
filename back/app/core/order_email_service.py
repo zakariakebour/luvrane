@@ -1,5 +1,7 @@
 import boto3
 from botocore.exceptions import ClientError
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 SES_CLIENT = boto3.client('ses', region_name='eu-west-3')
 SENDER = "Luvrane <orders@luvrane.com>"
@@ -24,6 +26,23 @@ def get_html_template(
     else:
         raise ValueError("La liste d'ordres est vide")
 
+    # Adaptación de la fecha al horario de Argelia (UTC+1)
+    tz_algeria = ZoneInfo("Africa/Algiers")
+    
+    # Tomamos la fecha de creación del pedido principal (que está en UTC)
+    created_at_utc = main_order.created_at
+    
+    # Nos aseguramos de que Python reconozca que la fecha de la base de datos es UTC si viene sin zona asignada
+    if created_at_utc.tzinfo is None:
+        created_at_utc = created_at_utc.replace(tzinfo=timezone.utc)
+        
+    # Convertimos al horario local de Argelia
+    created_at_algeria = created_at_utc.astimezone(tz_algeria)
+    
+    # Formateamos la fecha en un formato limpio (Ejemplo: "16 mai 2026 à 18:01")
+    # %d = día, %b = mes abreviado, %Y = año, %H:%M = hora de 24 horas
+    order_date_str = created_at_algeria.strftime("%d %b %Y à %H:%M")
+
     #Color
     brand_color = "#000000"
 
@@ -35,19 +54,21 @@ def get_html_template(
         "new_order_admin": "Nouvelle commande à confirmer"
     }
 
-    # URL dinámica
-    confirmation_url = (
-        f"https://luvrane.com/confirm-order/{confirmation_token}"
-        if confirmation_token
-        else "https://luvrane.com/account/orders"
-    )
+    # URL dinámica adaptada según el rol del destinatario y el store_id real
+    if confirmation_token:
+        confirmation_url = f"https://luvrane.com/confirm-order/{confirmation_token}"
+    elif template_type == "new_order_admin":
+        confirmation_url = f"https://luvrane.com/admin/stores/{main_order.store_id}/orders"
+    else:
+        confirmation_url = "https://luvrane.com/account/orders"
 
-    # Texto dinámico botón
-    button_text = (
-        "Confirmer ma commande"
-        if confirmation_token
-        else "Voir ma commande"
-    )
+    # Texto dinámico botón adaptado para el administrador de la tienda
+    if confirmation_token:
+        button_text = "Confirmer ma commande"
+    elif template_type == "new_order_admin":
+        button_text = "Gérer les commandes"
+    else:
+        button_text = "Voir ma commande"
 
     # Contenido según el tipo
     if template_type == "order_received":
@@ -95,7 +116,7 @@ def get_html_template(
         message = """
         Votre commande a été annulée.
         Si vous pensez qu'il s'agit d'une erreur,
-        veuillez contacter notre support.
+        vauillez contacter notre support.
         """
 
     elif template_type == "new_order_admin":
@@ -122,7 +143,7 @@ def get_html_template(
         orders_html_details += f"""
         <div style="border-bottom: 1px dashed #eee; padding-bottom: 15px; margin-bottom: 15px;">
             <p style="margin: 0 0 10px 0; font-size: 14px; color: #555; font-weight: bold;">
-                Colis {index} - Magasin #{str(o.store_id)[:8]}
+                Colis {index} - Magasin {str(o.store_name)}
             </p>
         """
         
@@ -239,7 +260,7 @@ def get_html_template(
             ">
 
                 <p style="margin-top: 0;">
-                    <b>Détails de la commande :</b>
+                    <b>Détails de la commande (Faite le {order_date_str}) :</b>
                 </p>
 
                 {orders_html_details}
