@@ -104,6 +104,15 @@ class Product(Base):
         default=lambda: datetime.now(timezone.utc)
     )
 
+    # Columna para categorias de genero
+    gender_category = Column(
+        SQLEnum(
+            GenderCategory,
+            native_enum=False,
+            length=30
+        ),
+        nullable=False
+    )
 
 # Tabla de imagenes/videos del producto principal
 class ProductImage(Base):
