@@ -20,7 +20,13 @@ class GenderCategory(enum.Enum):
     women = "women"
     kids = "kids"
     unisex = "unisex"
+
+#Categoria del producto
+class ProductCategory(enum.Enum):
+    clothing = "clothing"
     cosmetics = "cosmetics"
+    accessories = "accessories"
+
 
 # Tabla completa de productos
 class Product(Base):
