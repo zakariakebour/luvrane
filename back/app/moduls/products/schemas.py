@@ -127,8 +127,11 @@ class ProductBase(BaseModel):
     price: Decimal = Field(..., gt=0)
     # Categoria de genero del producto
     gender_category: str
+    # Categoria del producto
+    product_category: Optional[str] = None
     
     stock: int = Field(0, ge=0)
+
     @field_validator("name")
     @classmethod
     def validate_name(cls, value):
@@ -154,6 +157,15 @@ class ProductBase(BaseModel):
             raise ValueError(f"Catégorie invalide. Valeurs acceptées: {allowed}")
         return value
 
+    @field_validator("product_category")
+    @classmethod
+    def validate_product_category(cls, value):
+        if value is not None:
+            allowed = ["clothing", "cosmetics", "accessories"]
+            if value not in allowed:
+                raise ValueError(f"Catégorie invalide. Valeurs acceptées: {allowed}")
+        return value
+
 class ProductCreate(ProductBase):
     store_id: str
     # Media del producto principal
@@ -167,6 +179,8 @@ class ProductUpdate(BaseModel):
     price: Optional[Decimal] = None
     # Categoria de genero del producto
     gender_category: Optional[str] = None
+    # Categoria del producto
+    product_category: Optional[str] = None
 
     @field_validator("name")
     @classmethod
@@ -195,6 +209,15 @@ class ProductUpdate(BaseModel):
                 raise ValueError(f"Catégorie invalide. Valeurs acceptées: {allowed}")
         return value
 
+    @field_validator("product_category")
+    @classmethod
+    def validate_product_category(cls, value):
+        if value is not None:
+            allowed = ["clothing", "cosmetics", "accessories"]
+            if value not in allowed:
+                raise ValueError(f"Catégorie invalide. Valeurs acceptées: {allowed}")
+        return value
+
 class ProductResponse(ProductBase):
     id: str
     store_id: str
@@ -202,6 +225,9 @@ class ProductResponse(ProductBase):
     #
     store_name: Optional[str] = None
     store_photo_profile: Optional[str] = None
+
+    # Categoria del producto
+    product_category: Optional[str] = None
 
     # MEDIA PRODUCTO
     images: List[ProductImageResponse] = []

@@ -65,7 +65,7 @@ class Product(Base):
         default=ProductStatus.active
     )
 
-    # Columna para categorias de producto
+    # Columna para genero del producto
     gender_category = Column(
         SQLEnum(
             GenderCategory,
@@ -75,6 +75,15 @@ class Product(Base):
         nullable=False
     )
 
+    # Columna para categoria del producto
+    product_category = Column(
+        SQLEnum(
+            ProductCategory,
+            native_enum=False,
+            length=30
+        ),
+        nullable=True
+    )
     # Columna para registrar ultima fecha de modificacion
     updated_at = Column(
         DateTime,

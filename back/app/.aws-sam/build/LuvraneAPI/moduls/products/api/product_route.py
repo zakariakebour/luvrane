@@ -27,8 +27,8 @@ from core.database import get_db
 from core.dependencies import get_current_user
 #Importamos modulo de usuario
 from moduls.users.modules import User
-#Importamos ProductStatus y GenderCategory
-from moduls.products.modules import ProductStatus, GenderCategory
+#Importamos ProductStatus, GenderCategory y ProductCategory
+from moduls.products.modules import ProductStatus, GenderCategory, ProductCategory
 
 router = APIRouter(tags=["Products"])
 
@@ -49,9 +49,11 @@ def get_products(
     limit: int = 20,
     #Filtro opcional por categoria de genero
     gender_category: Optional[GenderCategory] = Query(None),
+    #Filtro opcional por categoria de producto
+    product_category: Optional[ProductCategory] = Query(None),
     db: Session = Depends(get_db)
 ):
-    return get_products_service(db, skip=skip, limit=limit, gender_category=gender_category)
+    return get_products_service(db, skip=skip, limit=limit, gender_category=gender_category, product_category=product_category)
 
 #Endpoint para buscar producto por nombre — publico
 @router.get("/search", response_model=List[ProductResponse])
@@ -69,9 +71,11 @@ def get_products_by_store(
     limit: int = 20,
     #Filtro opcional por categoria de genero
     gender_category: Optional[GenderCategory] = Query(None),
+    #Filtro opcional por categoria de producto
+    product_category: Optional[ProductCategory] = Query(None),
     db: Session = Depends(get_db)
 ):
-    return get_products_by_store_service(db, store_id, skip=skip, limit=limit, gender_category=gender_category)
+    return get_products_by_store_service(db, store_id, skip=skip, limit=limit, gender_category=gender_category, product_category=product_category)
 
 #Endpoint para consultar estado del producto — protegido
 @router.get("/{product_id}/status")

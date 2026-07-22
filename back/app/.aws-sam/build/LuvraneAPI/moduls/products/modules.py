@@ -21,6 +21,12 @@ class GenderCategory(enum.Enum):
     kids = "kids"
     unisex = "unisex"
 
+#Categoria del producto
+class ProductCategory(enum.Enum):
+    clothing = "clothing"
+    cosmetics = "cosmetics"
+    accessories = "accessories"
+
 
 # Tabla completa de productos
 class Product(Base):
@@ -59,7 +65,7 @@ class Product(Base):
         default=ProductStatus.active
     )
 
-    # Columna para categorias de producto
+    # Columna para genero del producto
     gender_category = Column(
         SQLEnum(
             GenderCategory,
@@ -69,6 +75,15 @@ class Product(Base):
         nullable=False
     )
 
+    # Columna para categoria del producto
+    product_category = Column(
+        SQLEnum(
+            ProductCategory,
+            native_enum=False,
+            length=30
+        ),
+        nullable=True
+    )
     # Columna para registrar ultima fecha de modificacion
     updated_at = Column(
         DateTime,
@@ -98,6 +113,15 @@ class Product(Base):
         default=lambda: datetime.now(timezone.utc)
     )
 
+    # Columna para categorias de genero
+    gender_category = Column(
+        SQLEnum(
+            GenderCategory,
+            native_enum=False,
+            length=30
+        ),
+        nullable=False
+    )
 
 # Tabla de imagenes/videos del producto principal
 class ProductImage(Base):

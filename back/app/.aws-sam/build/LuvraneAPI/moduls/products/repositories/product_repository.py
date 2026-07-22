@@ -21,17 +21,19 @@ def create_product(db: Session, product_data: dict) -> Product:
 
 
 #Metodo para seleccionar todos los productos con paginacion y filtro opcional de genero
-def get_products(db: Session, skip: int = 0, limit: int = 20, gender_category=None) -> dict:
+def get_products(db: Session, skip: int = 0, limit: int = 20, gender_category=None, product_category=None) -> dict:
     query = db.query(Product).options(joinedload(Product.store)).filter(Product.is_active == True)
     
     if gender_category:
         query = query.filter(Product.gender_category == gender_category)
+
+    if product_category:
+        query = query.filter(Product.product_category == product_category)
         
     total = query.count()
     items = query.offset(skip).limit(limit).all()
     
     return {"products": items, "total": total}
-
 
 
 #Metodo para seleccionar producto segun su identificador
@@ -58,9 +60,8 @@ def get_product_by_name(db: Session, product_name: str):
     ).all()
 
 
-
 #Metodo para listar productos de una tienda concreta con paginacion y filtro opcional de genero
-def get_products_by_store(db: Session, store_id: str, skip: int = 0, limit: int = 20, gender_category=None) -> dict:
+def get_products_by_store(db: Session, store_id: str, skip: int = 0, limit: int = 20, gender_category=None, product_category=None) -> dict:
     query = db.query(Product).options(
         joinedload(Product.images),
         joinedload(Product.variants).joinedload(ProductVariant.color),
@@ -74,6 +75,10 @@ def get_products_by_store(db: Session, store_id: str, skip: int = 0, limit: int 
     #Aplicamos filtro de categoria de genero si se envia
     if gender_category:
         query = query.filter(Product.gender_category == gender_category)
+
+    #Aplicamos filtro de categoria de producto si se envia
+    if product_category:
+        query = query.filter(Product.product_category == product_category)
 
     total = query.count()
     products = query.offset(skip).limit(limit).all()
@@ -139,4 +144,3 @@ def get_product_by_name_and_store(db: Session, name: str, store_id: str):
         )
         .first()
     )
-
