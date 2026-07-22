@@ -1,4 +1,0 @@
-#Importamos los repositorios de produto
-from moduls.products.repositories.product_repository import create_product,update_product,delete_product,get_product_by_id,get_product_by_name,get_products
-from moduls.products.repositories.product_images import add_product_image,delete_product_image,update_image_position
-from moduls.products.repositories.product_variant import add_product_variant,delete_product_variant,update_variant_stock,get_product_variant_by_id,get_variants_by_product
