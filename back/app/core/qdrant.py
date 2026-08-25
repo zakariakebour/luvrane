@@ -1,6 +1,6 @@
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct
-from core.config import QDRANT_ENDPOINT, QDRANT_API_KEY
+from app.core.config import QDRANT_ENDPOINT, QDRANT_API_KEY
 
 #Dimension de embeddings de Gemini (text-embedding-004)
 EMBEDDING_DIMENSION = 768
@@ -22,7 +22,7 @@ def get_qdrant_client() -> QdrantClient:
 
 def ensure_collection_exists():
     """
-    Crea la coleccion si no existe todavia.º
+    Crea la coleccion si no existe todavia.
     Se llama una vez al arrancar o antes de indexar.
     """
     client = get_qdrant_client()
@@ -40,3 +40,5 @@ def ensure_collection_exists():
         print(f"[Qdrant] Coleccion '{COLLECTION_NAME}' creada correctamente")
     else:
         print(f"[Qdrant] Coleccion '{COLLECTION_NAME}' ya existe")
+
+ensure_collection_exists()
