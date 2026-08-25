@@ -69,3 +69,7 @@ DSQL_ENDPOINT = secrets["DSQL_ENDPOINT"]
 DSQL_PORT = int(secrets["DSQL_PORT"])
 DSQL_USER = secrets["DSQL_USER"]
 DSQL_DATABASE = secrets["DSQL_DATABASE"]
+
+# Variables para la conexión qdrant
+QDRANT_ENDPOINT = os.getenv("QDRANT_ENDPOINT")
+QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
