@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict,Field
 from typing import Optional
 
 # Clase para validación de cada campo de tienda
@@ -10,7 +10,7 @@ class StoreAIData(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
-    store_id: str
+    store_id: str = Field(alias="id")
     name: str
     description: Optional[str] = None
     type: str
