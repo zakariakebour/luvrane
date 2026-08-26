@@ -18,7 +18,7 @@ Resources:
     Properties:
       FunctionName: luvrane-api
       CodeUri: .
-      Handler: main.handler
+      Handler: main.lambda_handler
       Runtime: python3.11
       Architectures:
         - x86_64

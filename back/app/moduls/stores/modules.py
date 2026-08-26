@@ -95,3 +95,4 @@ class ShippingRate(Base):
     return_price = Column(Numeric(10, 2), nullable=True) 
     estimated_days = Column(Integer, default=3)
     is_active = Column(Boolean, default=True)
+

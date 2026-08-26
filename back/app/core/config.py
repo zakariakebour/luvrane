@@ -27,6 +27,7 @@ def get_secrets():
             "DSQL_DATABASE": os.getenv("DSQL_DATABASE"),
             "QDRANT_ENDPOINT": os.getenv("QDRANT_ENDPOINT"),
             "QDRANT_API_KEY": os.getenv("QDRANT_API_KEY"),
+            "GEMINI_API_KEY": os.getenv("GEMINI_API_KEY")
         }
 
     #En produccion (Lambda) leemos desde variables de entorno directamente
@@ -49,6 +50,7 @@ def get_secrets():
         "DSQL_DATABASE": os.getenv("DSQL_DATABASE"),
         "QDRANT_ENDPOINT": os.getenv("QDRANT_ENDPOINT"),
         "QDRANT_API_KEY": os.getenv("QDRANT_API_KEY"),
+        "GEMINI_API_KEY": os.getenv("GEMINI_API_KEY")
     }
 
 #Cargamos los secrets
@@ -77,3 +79,4 @@ DSQL_DATABASE = secrets["DSQL_DATABASE"]
 # Variables para la conexión qdrant
 QDRANT_ENDPOINT = secrets["QDRANT_ENDPOINT"]
 QDRANT_API_KEY = secrets["QDRANT_API_KEY"]
+GEMINI_API_KEY = secrets["GEMINI_API_KEY"]
