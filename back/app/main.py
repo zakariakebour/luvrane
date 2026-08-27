@@ -22,7 +22,9 @@ from moduls.products.modules import Product, ProductVariant, ProductImage
 from moduls.stores.modules import Store, ShippingRate
 from moduls.orders.modules import Order, OrderItem, CheckoutSession, OrderStatus
 #Importamos los endpoints de inteligencia artificial
-from moduls.ai.api.store_endoints import router as ai_router
+from moduls.ai.api.store_endpoints import router as ai_router
+# Endpoint de index
+from moduls.ai.api.indexing_endpoints import router as inedex_router
 
 #Creamos la aplicacion
 app = FastAPI(
@@ -63,6 +65,7 @@ app.include_router(product_image_router, prefix="/api/v1/products/images")
 app.include_router(product_variant_router, prefix="/api/v1/products/variants")
 app.include_router(order_router, prefix="/api/v1")
 app.include_router(ai_router, prefix="/api/v1/ai")
+app.include_router(inedex_router,prefix=("/api/v1/ai"))
 
 #Endpoint de salud para verificar que la API esta funcionando
 @app.get("/health")

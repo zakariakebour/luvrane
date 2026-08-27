@@ -18,8 +18,9 @@ from core.exceptions import (
 # Importamos metodo que genera URL presignada para archivos (imagenes,videos)
 from core.s3 import generate_presigned_url,delete_file
 from moduls.products.schemas import ProductResponse
-
-
+# Importamos el método de indexación por si el dueño de la tienda actualiza algun dato de la tienda se indexa otra vez y nos quedamos actualizados
+from moduls.ai.services.indexing_service import index_store_service
+from core.qdrant import delete_store_points
 #Serializado de store
 def serialize_store(store):
     if not store:
@@ -120,9 +121,14 @@ def delete_store_service(db, store_id: str, owner_id):
     if not store.is_active:
         raise ConflictException("La boutique est déjà désactivée")
 
-    return delete_store(db, store)
+    # Eliminamos 
+    result = delete_store(db, store)
 
+    # Eliminamos todos sus vectores de Qdrant
+    delete_store_points(store_id)
 
+    return result
+    
 # Metodo para actualizar tienda
 def update_store_service(db, store_id: str, store_data, owner_id):
 
@@ -169,7 +175,13 @@ def update_store_service(db, store_id: str, store_data, owner_id):
 
 
     # Actualizamos
-    return update_store(db, store, store_dict)
+    update_store(db, store, store_dict)
+
+    # Re-indexamos despues de guardar los cambios en la base de datos
+    index_store_service(db,store_id)
+
+    # Devovlvemos los cambios
+    return serialize_store(store)
 
 # Metodo para obtener la tienda del usuario autenticado
 def get_my_store_service(db, owner_id: str):

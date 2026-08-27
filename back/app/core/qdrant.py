@@ -75,6 +75,7 @@ async def upsert_point(point_id: str, vector: list, payload: dict):
                 ]
             }
         )
+        print("[Qdrant] upsert response:", response.status_code, response.text)
         response.raise_for_status()
         return response.json()
 
@@ -110,3 +111,91 @@ async def search_points(vector: list, store_id: str, limit: int = 5) -> list:
         )
         response.raise_for_status()
         return response.json().get("result", [])
+
+async def delete_point(point_id: str):
+    """
+    Elimina un punto de la coleccion de Qdrant.
+    Se utiliza cuando se elimina una Wilaya de una tienda.
+    """
+    async with httpx.AsyncClient() as client:
+
+        response = await client.post(
+            f"{QDRANT_ENDPOINT}/collections/{COLLECTION_NAME}/points/delete",
+            headers=get_headers(),
+            json={
+                "points": [point_id]
+            }
+        )
+
+        print("[Qdrant] delete response:", response.status_code, response.text)
+        response.raise_for_status()
+
+        return response.json()
+
+async def delete_store_wilaya_points(store_id: str):
+    """
+    Elimina todos los puntos correspondientes a las Wilayas de una tienda.
+    Mantiene el punto general de la tienda.
+    """
+    async with httpx.AsyncClient() as client:
+
+        response = await client.post(
+            f"{QDRANT_ENDPOINT}/collections/{COLLECTION_NAME}/points/delete",
+            headers=get_headers(),
+            json={
+                "filter": {
+                    "must": [
+                        {
+                            "key": "store_id",
+                            "match": {
+                                "value": store_id
+                            }
+                        },
+                        {
+                            "key": "wilaya_id",
+                            "match": {
+                                "is_empty": True
+                            }
+                        }
+                    ]
+                }
+            }
+        )
+
+        print(
+            "[Qdrant] delete wilaya points response:",
+            response.status_code,
+            response.text
+        )
+
+        response.raise_for_status()
+
+        return response.json()
+
+async def delete_store_points(store_id: str):
+    """
+    Elimina todos los puntos de una tienda de Qdrant.
+    """
+    async with httpx.AsyncClient() as client:
+
+        response = await client.post(
+            f"{QDRANT_ENDPOINT}/collections/{COLLECTION_NAME}/points/delete",
+            headers=get_headers(),
+            json={
+                "filter": {
+                    "must": [
+                        {
+                            "key": "store_id",
+                            "match": {
+                                "value": store_id
+                            }
+                        }
+                    ]
+                }
+            }
+        )
+
+        print("[Qdrant] delete store points response:", response.status_code, response.text)
+        response.raise_for_status()
+
+        return response.json()

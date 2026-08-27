@@ -9,12 +9,6 @@ from google.auth.transport import requests
 #Metodo para intercambiar el code de google por un token
 async def exchange_google_code(code: str) -> dict:
     async with httpx.AsyncClient() as client:
-        print("FULL REQUEST DATA:", {
-            "code": code[:20],  # solo primeros 20 caracteres por seguridad
-            "client_id": GOOGLE_CLIENT_ID,
-            "redirect_uri": GOOGLE_REDIRECT_URI,
-            "grant_type": "authorization_code"
-        })
         #Mandamos el code a Google para obtener el token
         response = await client.post(
             "https://oauth2.googleapis.com/token",
@@ -25,11 +19,7 @@ async def exchange_google_code(code: str) -> dict:
                 "redirect_uri": GOOGLE_REDIRECT_URI,
                 "grant_type": "authorization_code"
             }
-        )
-        print("GOOGLE TOKEN ERROR:", response.status_code, response.text)
-        print("REDIRECT USED:", repr(GOOGLE_REDIRECT_URI))
-        print("CLIENT ID:", GOOGLE_CLIENT_ID)
-        
+        )        
         if response.status_code != 200:
             raise UnauthorizedException("Code Google invalide")
 

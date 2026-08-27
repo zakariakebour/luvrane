@@ -54,22 +54,22 @@ def get_store_by_name(name: str, db: Session = Depends(get_db)):
 
 #Endpoint para actualizar tienda — solo el owner
 @router.put("/{store_id}", response_model=StoreResponse)
-def update_store(
+async def update_store(
     store_id: str,
     store_data: UpdateStore,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)            
 ):
-    return update_store_service(db, store_id, store_data, current_user.id)
+    return await update_store_service(db, store_id, store_data, current_user.id)
 
 #Endpoint para eliminar/desactivar tienda — solo el owner
 @router.delete("/{store_id}", response_model=StoreResponse)
-def delete_store(
+async def delete_store(
     store_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)            
 ):
-    return delete_store_service(db, store_id, current_user.id)
+    return await delete_store_service(db, store_id, current_user.id)
 
 #Endpoint para recibir datos de la tienda segun el identificador — publico
 @router.get("/{store_id}", response_model=StoreResponse)

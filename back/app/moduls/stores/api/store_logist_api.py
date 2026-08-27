@@ -30,20 +30,20 @@ def get_my_shipping_rates(
 
 # 2. Actualización Masiva (El botón "Guardar Cambios" del panel)
 @router.post("/me/shipping/bulk", response_model=List[ShippingRateResponse])
-def update_shipping_rates(
+async def update_shipping_rates(
     data: BulkShippingUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     store = db.query(Store).filter(Store.owner_id == current_user.id).first()
-    return update_store_logistics_service(db,store.id, data)
+    return await update_store_logistics_service(db,store.id, data)
 
 # 3. Eliminar una Wilaya específica
 @router.delete("/me/shipping/{wilaya_id}")
-def delete_wilaya_rate(
+async def delete_wilaya_rate(
     wilaya_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     store = db.query(Store).filter(Store.owner_id == current_user.id).first()
-    return remove_wilaya_rate_service(db, store.id, wilaya_id)
+    return await remove_wilaya_rate_service(db, store.id, wilaya_id)
