@@ -1,6 +1,6 @@
 import boto3
 import uuid
-from core.config import AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_BUCKET, AWS_S3_REGION
+from core.config import AWS_S3_BUCKET, AWS_S3_REGION
 from core.exceptions import ValidationException
 from botocore.config import Config 
 

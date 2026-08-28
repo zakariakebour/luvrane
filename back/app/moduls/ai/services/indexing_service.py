@@ -9,6 +9,21 @@ from core.qdrant import upsert_point
 from moduls.stores.repositories.shipping_repository import get_all_store_rates
 # Importamos uuid para generar identificadores unicos para cada punto
 import uuid
+import asyncio
+
+# Metodo auxiliar para generar embedding con reintento automatico si Gemini da 429
+async def generate_embedding_with_retry(text: str, max_retries: int = 3) -> list:
+    for attempt in range(max_retries):
+        try:
+            return await generate_embedding(text)
+        except Exception as e:
+            if "429" in str(e) and attempt < max_retries - 1:
+                # Esperamos exponencialmente: 2s, 4s, 8s
+                wait = 2 ** (attempt + 1)
+                print(f"[Gemini] Rate limit, reintentando en {wait}s...")
+                await asyncio.sleep(wait)
+            else:
+                raise e
 
 # Método para indexar la tienda
 async def index_store_service(db, store_id: str):
@@ -28,8 +43,8 @@ async def index_store_service(db, store_id: str):
         Logistics: {store.logistics_partner or 'Without logistics'}
     """
 
-    # Generamos el embedding del texto
-    vector = await generate_embedding(text)
+    # Generamos el embedding del texto con reintento automatico
+    vector = await generate_embedding_with_retry(text)
 
     # Guardamos el vector en Qdrant con los metadatos de la tienda
     await upsert_point(
@@ -39,7 +54,7 @@ async def index_store_service(db, store_id: str):
             "store_id": store.id,
             "name": store.name,
             "type": store.type,
-            "Description": store.description,
+            "text": text,
             "category": store.category.value if store.category else None,
             "logistics_partner": store.logistics_partner or None
         }
@@ -49,7 +64,7 @@ async def index_store_service(db, store_id: str):
     rates = get_all_store_rates(db, store_id)
 
     # Creamos un chunk separado por cada wilaya
-    for rate in rates:
+    for i, rate in enumerate(rates):
 
         # Construimos texto con los datos de la wilaya
         wilaya_text = f"""
@@ -60,18 +75,17 @@ async def index_store_service(db, store_id: str):
             Días estimados: {rate.estimated_days or 'No especificado'}
         """
 
-        # Generamos embedding del chunk de wilaya
-        wilaya_vector = await generate_embedding(wilaya_text)
+        # Generamos embedding con reintento automatico
+        wilaya_vector = await generate_embedding_with_retry(wilaya_text)
 
         # Guardamos en Qdrant con un id unico por wilaya usando uuid5
-        # uuid5 genera siempre el mismo UUID para la misma combinacion de store_id + wilaya_id
-        # esto permite actualizar el punto si se re-indexa sin duplicar
         await upsert_point(
             point_id=str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{store.id}_{rate.wilaya_id}")),
             vector=wilaya_vector,
             payload={
                 "store_id": store.id,
                 "name": store.name,
+                "text": wilaya_text,
                 "wilaya_id": rate.wilaya_id,
                 "wilaya_name": rate.wilaya_name,
                 "delivery_price": float(rate.delivery_price),
@@ -79,5 +93,10 @@ async def index_store_service(db, store_id: str):
                 "estimated_days": rate.estimated_days
             }
         )
+
+        # Delay entre wilayas para no agotar el rate limit de Gemini
+        # Cada 10 wilayas esperamos 1 segundo
+        if (i + 1) % 10 == 0:
+            await asyncio.sleep(1)
 
     return {"message": f"Tienda '{store.name}' indexada correctamente con {len(rates)} wilayas"}

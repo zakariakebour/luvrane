@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, BackgroundTasks
 from sqlalchemy.orm import Session
-from moduls.stores.schemas import CreateStore, StoreResponse, StoresPageResponse, UpdateStore,StoreImagePresignedRequest,StoreImagePresignedResponse
+from moduls.stores.schemas import CreateStore, StoreResponse, StoresPageResponse, UpdateStore, StoreImagePresignedRequest, StoreImagePresignedResponse
 from moduls.stores.services.services import (
     create_store_service,
     get_store_by_id_service,
@@ -14,6 +14,8 @@ from moduls.stores.services.services import (
 from core.database import get_db
 from core.dependencies import get_current_user              
 from moduls.users.modules import User
+from moduls.ai.services.indexing_service import index_store_service
+from core.qdrant import delete_store_points
 
 router = APIRouter(tags=["Stores"])
 
@@ -21,10 +23,16 @@ router = APIRouter(tags=["Stores"])
 @router.post("/create", response_model=StoreResponse, status_code=201)
 def create_store(
     store: CreateStore,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)     
 ):
-    return create_store_service(db, store, current_user.id)  
+    result = create_store_service(db, store, current_user.id)
+
+    # Indexamos la tienda nueva en background
+    background_tasks.add_task(index_store_service, db, result.id)
+
+    return result
 
 #Endpoint para generar URL firmada para subir imagen/video de tienda
 @router.post("/upload-url", response_model=StoreImagePresignedResponse)
@@ -54,22 +62,44 @@ def get_store_by_name(name: str, db: Session = Depends(get_db)):
 
 #Endpoint para actualizar tienda — solo el owner
 @router.put("/{store_id}", response_model=StoreResponse)
-async def update_store(
+def update_store(
     store_id: str,
     store_data: UpdateStore,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)            
 ):
-    return await update_store_service(db, store_id, store_data, current_user.id)
+    # Actualizamos la tienda en la base de datos
+    result = update_store_service(
+        db,
+        store_id,
+        store_data,
+        current_user.id
+    )
+
+    # Re-indexamos en background sin bloquear la respuesta
+    background_tasks.add_task(
+        index_store_service,
+        db,
+        store_id
+    )
+
+    return result
 
 #Endpoint para eliminar/desactivar tienda — solo el owner
 @router.delete("/{store_id}", response_model=StoreResponse)
-async def delete_store(
+def delete_store(
     store_id: str,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)            
 ):
-    return await delete_store_service(db, store_id, current_user.id)
+    result = delete_store_service(db, store_id, current_user.id)
+
+    # Eliminamos todos los vectores de la tienda en background
+    background_tasks.add_task(delete_store_points, store_id)
+
+    return result
 
 #Endpoint para recibir datos de la tienda segun el identificador — publico
 @router.get("/{store_id}", response_model=StoreResponse)
