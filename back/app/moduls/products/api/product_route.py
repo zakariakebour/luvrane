@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import List, Optional
 
@@ -29,6 +29,10 @@ from core.dependencies import get_current_user
 from moduls.users.modules import User
 #Importamos ProductStatus, GenderCategory y ProductCategory
 from moduls.products.modules import ProductStatus, GenderCategory, ProductCategory
+#Importamos metodos de indexacion de productos
+from moduls.ai.services.indexing_service import index_store_product
+from core.qdrant import delete_point
+import uuid
 
 router = APIRouter(tags=["Products"])
 
@@ -37,10 +41,22 @@ router = APIRouter(tags=["Products"])
 @router.post("/", response_model=ProductResponse, status_code=201)
 def create_product(
     product_data: ProductCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    return create_product_service(db, product_data, current_user.id)
+    result = create_product_service(db, product_data, current_user.id)
+
+    # Indexamos el producto nuevo en background
+    background_tasks.add_task(
+        index_store_product,
+        db,
+        result.store_id,
+        result.id,
+        result
+    )
+
+    return result
 
 #Endpoint para listar todos los productos con paginacion — publico
 @router.get("/", response_model=ProductsPageResponse)
@@ -112,17 +128,36 @@ def get_product_by_id(
 def update_product(
     product_id: str,
     product_data: ProductUpdate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    return update_product_service(db, product_data, product_id, current_user.id)
+    result = update_product_service(db, product_data, product_id, current_user.id)
+
+    # Re-indexamos el producto actualizado en background
+    background_tasks.add_task(
+        index_store_product,
+        db,
+        result.store_id,
+        result.id,
+        result
+    )
+
+    return result
 
 
 #Endpoint para desactivar producto — protegido solo owners
 @router.delete("/{product_id}", response_model=ProductResponse)
 def delete_product(
     product_id: str,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    return delete_product_service(db, product_id, current_user.id)
+    result = delete_product_service(db, product_id, current_user.id)
+
+    # Eliminamos el punto del producto en Qdrant en background
+    point_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{result.store_id}_product_{product_id}"))
+    background_tasks.add_task(delete_point, point_id)
+
+    return result

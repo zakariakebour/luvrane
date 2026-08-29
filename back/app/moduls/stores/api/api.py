@@ -16,6 +16,7 @@ from core.dependencies import get_current_user
 from moduls.users.modules import User
 from moduls.ai.services.indexing_service import index_store_service
 from core.qdrant import delete_store_points
+from moduls.ai.services.indexing_service import index_store_info
 
 router = APIRouter(tags=["Stores"])
 
@@ -30,7 +31,7 @@ def create_store(
     result = create_store_service(db, store, current_user.id)
 
     # Indexamos la tienda nueva en background
-    background_tasks.add_task(index_store_service, db, result.id)
+    background_tasks.add_task(index_store_info, db, result.id)
 
     return result
 
@@ -78,11 +79,7 @@ def update_store(
     )
 
     # Re-indexamos en background sin bloquear la respuesta
-    background_tasks.add_task(
-        index_store_service,
-        db,
-        store_id
-    )
+    background_tasks.add_task(index_store_info, db, store_id)
 
     return result
 

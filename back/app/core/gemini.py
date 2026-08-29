@@ -5,7 +5,7 @@ from core.config import GEMINI_API_KEY
 EMBEDDING_MODEL = "gemini-embedding-001"
 
 #Modelo de Gemini encargado de generar respuestas para los usuarios
-GENERATION_MODEL = "gemini-3.6-flash"
+GENERATION_MODEL = "gemini-3.1-flash-lite"
 
 #Dimension de los embeddings que utilizaremos en Qdrant
 EMBEDDING_DIMENSION = 768

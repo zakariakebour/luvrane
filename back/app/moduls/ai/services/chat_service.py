@@ -14,7 +14,7 @@ async def chat_with_store_service(db, store_id: str, question: str, history: lis
     question_vector = await generate_embedding(question)
 
     # Buscamos los chunks mas relevantes de esta tienda en Qdrant
-    results = await search_points(question_vector, store_id, limit=5)
+    results = await search_points(question_vector, store_id, limit=3)
 
     # Si no hay contexto en Qdrant la tienda no esta indexada
     if not results:
@@ -31,23 +31,23 @@ async def chat_with_store_service(db, store_id: str, question: str, history: lis
 
     # Construimos el prompt completo
     prompt = f"""
-Eres el asistente virtual de la tienda "{store.name}".
-Responde SOLO con información de la tienda basándote en el contexto proporcionado.
-Detecta el idioma de la pregunta y responde en ese mismo idioma.
-Si no tienes información suficiente para responder, dilo claramente.
-No inventes información que no esté en el contexto.
+        Eres el asistente virtual de la tienda "{store.name}".
+        Responde SOLO con información de la tienda basándote en el contexto proporcionado.
+        Detecta el idioma de la pregunta y responde en ese mismo idioma.
+        Si no tienes información suficiente para responder, dilo claramente.
+        No inventes información que no esté en el contexto.
 
-CONTEXTO DE LA TIENDA:
-{context}
+        CONTEXTO DE LA TIENDA:
+        {context}
 
-HISTORIAL DE CONVERSACIÓN:
-{history_text}
+        HISTORIAL DE CONVERSACIÓN:
+        {history_text}
 
-PREGUNTA ACTUAL:
-{question}
+        PREGUNTA ACTUAL:
+        {question}
 
-RESPUESTA:
-"""
+        RESPUESTA:
+        """
 
     # Gemini genera la respuesta
     answer = await generate_response(prompt)

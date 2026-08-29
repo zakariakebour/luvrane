@@ -11,12 +11,11 @@ from moduls.stores.services.shipping_service import (
     remove_wilaya_rate_service
 )
 from moduls.stores.modules import Store
-from moduls.ai.services.indexing_service import index_store_service
-
 # Infraestructura
 from core.database import get_db
 from core.dependencies import get_current_user
 from moduls.users.modules import User
+from moduls.ai.services.indexing_service import index_store_wilaya
 
 router = APIRouter(tags=["Store Logistics"])
 
@@ -43,11 +42,8 @@ def update_shipping_rates(
     result = update_store_logistics_service(db, store.id, data)
 
     # Re-indexamos en background sin bloquear la respuesta
-    background_tasks.add_task(
-        index_store_service,
-        db,
-        store.id
-    )
+    for rate_data in data.rates:
+        background_tasks.add_task(index_store_wilaya, db, store.id, rate_data.wilaya_id)
 
     return result
 
