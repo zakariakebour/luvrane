@@ -26,6 +26,7 @@ from moduls.ai.api.store_endpoints import router as ai_router
 # Endpoint de index
 from moduls.ai.api.indexing_endpoints import router as inedex_router
 from moduls.ai.api.chat_endpoints import router as chat_router
+from moduls.users.api.password_reset_api import password_reset_router
 
 #Creamos la aplicacion
 app = FastAPI(
@@ -68,7 +69,7 @@ app.include_router(order_router, prefix="/api/v1")
 app.include_router(ai_router, prefix="/api/v1/ai")
 app.include_router(inedex_router,prefix=("/api/v1/ai"))
 app.include_router(chat_router, prefix="/api/v1/ai")
-
+app.include_router(password_reset_router,prefix="/api/v1/users")
 #Endpoint de salud para verificar que la API esta funcionando
 @app.get("/health")
 def health():

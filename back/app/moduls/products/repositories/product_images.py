@@ -34,3 +34,13 @@ def update_image_position(db: Session, image_id: str, position: int) -> ProductI
         db.commit()
         db.refresh(image)
     return image
+
+# Método para sacar la imagen del producto y pasarsela a la inteliencia artificial para mostrarla en el chat de la IA
+# Metodo para obtener la primera imagen principal de un producto por su product_id
+def get_primary_image_by_product_id(db: Session, product_id: str) -> ProductImage | None:
+    return (
+        db.query(ProductImage)
+        .filter(ProductImage.product_id == product_id)
+        .order_by(ProductImage.position.asc())
+        .first()
+    )

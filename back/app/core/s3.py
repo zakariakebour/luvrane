@@ -43,6 +43,7 @@ def generate_presigned_url(folder: str, content_type: str, expires_in: int = 300
         Params={
             "Bucket": AWS_S3_BUCKET,
             "Key": filename,
+            "ContentType": content_type
         },
         ExpiresIn=expires_in
     )

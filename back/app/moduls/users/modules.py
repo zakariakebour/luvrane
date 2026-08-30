@@ -209,3 +209,13 @@ class Wilaya(Base):
 
     id = Column(Integer, primary_key=True, index=True) 
     name = Column(String(100), nullable=False)
+
+# Tabla para recuperación de contraseña
+class PasswordResetToken(Base):
+    __tablename__ = "password_reset_tokens"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String(36), nullable=False, index=True)
+    token = Column(String(255), unique=True, nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
